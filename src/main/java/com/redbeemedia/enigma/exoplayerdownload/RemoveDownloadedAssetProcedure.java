@@ -11,6 +11,7 @@ import com.redbeemedia.enigma.core.task.TaskException;
 import com.redbeemedia.enigma.core.util.AndroidThreadUtil;
 import com.redbeemedia.enigma.core.util.RuntimeExceptionHandler;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
+import com.redbeemedia.enigma.download.EnigmaDownloadContext;
 import com.redbeemedia.enigma.download.resulthandler.IResultHandler;
 import com.redbeemedia.enigma.exoplayerintegration.ExoPlayerIntegrationContext;
 
@@ -105,6 +106,7 @@ import java.util.concurrent.TimeoutException;
                 }
             });
             exceptionHandler.catchExceptions(() -> ExoPlayerDownloadContext.sendRemoveDownload(contentIdToRemove, false));
+            exceptionHandler.catchExceptions(() -> EnigmaDownloadContext.getMetadataManager().clear(contentIdToRemove));
             exceptionHandler.rethrowIfAnyExceptions();
         }
     }

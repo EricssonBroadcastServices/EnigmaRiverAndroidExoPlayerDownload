@@ -14,6 +14,7 @@ import com.google.android.exoplayer2.upstream.cache.CacheDataSourceFactory;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
 import com.redbeemedia.enigma.exoplayerintegration.ExoPlayerIntegrationContext;
 import com.redbeemedia.enigma.exoplayerintegration.IMediaSourceFactory;
+import com.redbeemedia.enigma.exoplayerintegration.IOfflineDrmKeySource;
 import com.redbeemedia.enigma.exoplayerintegration.util.MediaSourceFactoryConfigurator;
 
 import java.io.IOException;
@@ -22,7 +23,7 @@ import java.util.List;
 /**
  * Data used/needed by exoplayerintegration module to start playback of a downloaded file.
  */
-public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownloadData, IMediaSourceFactory {
+public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownloadData, IMediaSourceFactory, IOfflineDrmKeySource {
     public final String contentId;
     private final DownloadedAssetMetaData metaData; //Expected to be non-null
 
@@ -34,6 +35,11 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
     @Override
     public String getAssetId() {
         return metaData.getAssetId();
+    }
+
+    @Override
+    public byte[] getDrmKeys() {
+        return metaData.getDrmKey();
     }
 
     @Override

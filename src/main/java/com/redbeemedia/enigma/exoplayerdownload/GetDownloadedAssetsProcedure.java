@@ -5,6 +5,8 @@ import com.google.android.exoplayer2.offline.DownloadCursor;
 import com.google.android.exoplayer2.offline.DownloadIndex;
 import com.redbeemedia.enigma.core.error.UnexpectedError;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
+import com.redbeemedia.enigma.download.EnigmaDownloadContext;
+import com.redbeemedia.enigma.download.IMetadataManager;
 import com.redbeemedia.enigma.download.resulthandler.IResultHandler;
 import com.redbeemedia.enigma.exoplayerintegration.ExoPlayerIntegrationContext;
 
@@ -26,7 +28,10 @@ import java.util.List;
             DownloadCursor downloadCursor = downloadIndex.getDownloads(Download.STATE_COMPLETED);
             while(downloadCursor.moveToNext()) {
                 Download download = downloadCursor.getDownload();
-                DownloadedAssetMetaData metaData = DownloadedAssetMetaData.fromBytes(download.request.data);
+
+                IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
+                DownloadedAssetMetaData metaData = DownloadedAssetMetaData.fromBytes(metadataManager.load(download.request.id));
+
                 DownloadedPlayable.IInternalDownloadData downloadData = new ExoPlayerDownloadData(download.request.id, metaData);
                 playables.add(new DownloadedPlayable(downloadData));
             }
