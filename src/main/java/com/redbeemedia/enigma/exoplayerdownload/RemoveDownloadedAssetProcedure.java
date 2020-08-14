@@ -46,7 +46,7 @@ import java.util.concurrent.TimeoutException;
     private void sendRemoveRequest(ExoPlayerDownloadData exoDownloadData) throws ProcedureException {
         new RemoveRequest(
                 exoDownloadData.contentId,
-                ExoPlayerIntegrationContext.getDownloadManager(),
+                ExoPlayerDownloadContext.getDownloadManager(),
                 EnigmaRiverContext.getTaskFactoryProvider().getTaskFactory(),
                 resultHandler)
         .start();

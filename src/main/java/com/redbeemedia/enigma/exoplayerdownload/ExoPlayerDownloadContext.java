@@ -4,12 +4,22 @@ import android.app.Application;
 
 import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.RenderersFactory;
+import com.google.android.exoplayer2.database.ExoDatabaseProvider;
+import com.google.android.exoplayer2.offline.DefaultDownloadIndex;
+import com.google.android.exoplayer2.offline.DefaultDownloaderFactory;
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadManager;
 import com.google.android.exoplayer2.offline.DownloadRequest;
 import com.google.android.exoplayer2.offline.DownloadService;
+import com.google.android.exoplayer2.offline.DownloaderConstructorHelper;
+import com.google.android.exoplayer2.offline.WritableDownloadIndex;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.upstream.HttpDataSource;
+import com.google.android.exoplayer2.upstream.cache.Cache;
+import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor;
+import com.google.android.exoplayer2.upstream.cache.SimpleCache;
 import com.redbeemedia.enigma.core.context.EnigmaRiverContext;
 import com.redbeemedia.enigma.core.context.IModuleContextInitialization;
 import com.redbeemedia.enigma.core.context.IModuleInfo;
@@ -20,8 +30,8 @@ import com.redbeemedia.enigma.core.format.IMediaFormatSupportSpec;
 import com.redbeemedia.enigma.download.EnigmaDownload;
 import com.redbeemedia.enigma.download.EnigmaDownloadContext;
 import com.redbeemedia.enigma.download.IEnigmaDownloadImplementation;
-import com.redbeemedia.enigma.exoplayerintegration.ExoPlayerIntegrationContext;
 
+import java.io.File;
 import java.lang.reflect.Method;
 
 public class ExoPlayerDownloadContext {
@@ -90,6 +100,17 @@ public class ExoPlayerDownloadContext {
         return initializedContext.downloadSupportSpec;
     }
 
+    public static DownloadManager getDownloadManager() {
+        assertInitialized();
+        return initializedContext.downloadManager;
+    }
+
+    public static Cache getDownloadCache() {
+        assertInitialized();
+        return initializedContext.downloadCache;
+    }
+
+
     private static void registerDownloadImplementation(IEnigmaDownloadImplementation downloadImplementation) throws ModuleInitializationException {
         try {
             Method method = EnigmaDownload.class.getDeclaredMethod("registerDownloadImplementation", IEnigmaDownloadImplementation.class);
@@ -121,7 +142,7 @@ public class ExoPlayerDownloadContext {
         }
     }
 
-    public static void sendAddDownload(DownloadRequest downloadRequest, boolean foreground) {
+    /*package-protected*/ static void sendAddDownload(DownloadRequest downloadRequest, boolean foreground) {
         assertInitialized();
         DownloadService.sendAddDownload(
                 initializedContext.application,
@@ -130,7 +151,7 @@ public class ExoPlayerDownloadContext {
                 foreground);
     }
 
-    public static void sendRemoveDownload(String contentId, boolean foreground) {
+    /*package-preotected*/ static void sendRemoveDownload(String contentId, boolean foreground) {
         assertInitialized();
         DownloadService.sendRemoveDownload(initializedContext.application,
                 EnigmaExoPlayerDownloadService.class,
@@ -143,9 +164,28 @@ public class ExoPlayerDownloadContext {
         private final DataSource.Factory dataSourceFactory;
         private final RenderersFactory renderersFactory;
         private final IMediaFormatSupportSpec downloadSupportSpec;
+        private final Cache downloadCache;
+        private final DownloadManager downloadManager;
 
         public InitializedContext(IModuleContextInitialization initialization) {
             this.application = initialization.getApplication();
+
+            ExoDatabaseProvider databaseProvider = new ExoDatabaseProvider(application);
+            WritableDownloadIndex downloadIndex = new DefaultDownloadIndex(databaseProvider);
+
+            File downloadDirectory = application.getFilesDir();
+            File downloadContentDirectory = new File(downloadDirectory, "downloads");
+
+            downloadCache =
+                    new SimpleCache(downloadContentDirectory, new NoOpCacheEvictor(), databaseProvider);
+
+            HttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSourceFactory("enigma_river_download");
+
+            DownloaderConstructorHelper downloaderConstructorHelper = new DownloaderConstructorHelper(downloadCache, httpDataSourceFactory);
+            downloadManager = new DownloadManager(
+                    application,
+                    downloadIndex,
+                    new DefaultDownloaderFactory(downloaderConstructorHelper));
 
             Initialization moduleSettings = initialization.getModuleSettings(MODULE_INFO);
 
@@ -155,7 +195,7 @@ public class ExoPlayerDownloadContext {
 
             renderersFactory = new DefaultRenderersFactory(application);
 
-            ExoPlayerIntegrationContext.getDownloadManager().addListener(new DownloadManager.Listener() {
+            downloadManager.addListener(new DownloadManager.Listener() {
                 @Override
                 public void onDownloadRemoved(DownloadManager downloadManager, Download download) {
                     String contentId = download.request.id;

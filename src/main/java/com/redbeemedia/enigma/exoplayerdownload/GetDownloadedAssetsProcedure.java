@@ -24,7 +24,7 @@ import java.util.List;
         List<DownloadedPlayable> playables = new ArrayList<>();
         try {
 
-            DownloadIndex downloadIndex = ExoPlayerIntegrationContext.getDownloadManager().getDownloadIndex();
+            DownloadIndex downloadIndex = ExoPlayerDownloadContext.getDownloadManager().getDownloadIndex();
             DownloadCursor downloadCursor = downloadIndex.getDownloads(Download.STATE_COMPLETED);
             while(downloadCursor.moveToNext()) {
                 Download download = downloadCursor.getDownload();

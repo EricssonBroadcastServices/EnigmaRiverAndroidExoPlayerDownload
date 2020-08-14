@@ -14,7 +14,6 @@ import com.google.android.exoplayer2.ui.DownloadNotificationHelper;
 import com.google.android.exoplayer2.util.Log;
 import com.google.android.exoplayer2.util.NotificationUtil;
 import com.google.android.exoplayer2.util.Util;
-import com.redbeemedia.enigma.exoplayerintegration.ExoPlayerIntegrationContext;
 
 import java.util.List;
 import java.util.Objects;
@@ -45,7 +44,7 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
 
   @Override
   protected DownloadManager getDownloadManager() {
-    return ExoPlayerIntegrationContext.getDownloadManager();
+    return ExoPlayerDownloadContext.getDownloadManager();
   }
 
   @SuppressLint("MissingPermission")

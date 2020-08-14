@@ -32,19 +32,19 @@ dependencies {
     if(findProject(':core') != null) {
         implementation project(":core")
     } else {
-        implementation "com.github.EricssonBroadcastServices.EnigmaRiverAndroid:core:r3.1.0"
+        implementation "com.github.EricssonBroadcastServices.EnigmaRiverAndroid:core:r3.1.1-BETA-1"
     }
 
     if(findProject(':download') != null) {
         implementation project(":download")
     } else {
-        implementation "com.github.EricssonBroadcastServices.EnigmaRiverAndroid:download:r3.1.0"
+        implementation "com.github.EricssonBroadcastServices.EnigmaRiverAndroid:download:r3.1.1-BETA-1"
     }
 	
 	if(findProject(':exoplayerintegration') != null) {
         implementation project(":exoplayerintegration")
     } else {
-        implementation "com.github.EricssonBroadcastServices.EnigmaRiverAndroid:exoplayerintegration:r3.1.0"
+        implementation "com.github.EricssonBroadcastServices.EnigmaRiverAndroid:exoplayerintegration:r3.1.1-BETA-1"
     }
 
     testImplementation 'junit:junit:4.12'
@@ -52,6 +52,6 @@ dependencies {
     if(findProject(':internalTestUtils') != null) {
         testImplementation project(":internalTestUtils")
     } else {
-        testImplementation 'com.github.EricssonBroadcastServices.EnigmaRiverAndroid:internalTestUtils:r3.1.0'
+        testImplementation 'com.github.EricssonBroadcastServices.EnigmaRiverAndroid:internalTestUtils:r3.1.1-BETA-1'
     }
 }

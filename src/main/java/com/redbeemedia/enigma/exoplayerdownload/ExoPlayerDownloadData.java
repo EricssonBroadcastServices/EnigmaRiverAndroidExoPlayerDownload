@@ -45,8 +45,8 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
     @Override
     public MediaSource createMediaSource(MediaSourceFactoryConfigurator configurator) {
         try {
-            Cache downloadCache = ExoPlayerIntegrationContext.getDownloadCache();
-            DownloadIndex downloadIndex = ExoPlayerIntegrationContext.getDownloadManager().getDownloadIndex();
+            Cache downloadCache = ExoPlayerDownloadContext.getDownloadCache();
+            DownloadIndex downloadIndex = ExoPlayerDownloadContext.getDownloadManager().getDownloadIndex();
             Download download = downloadIndex.getDownload(contentId);
             if(download == null) {
                 throw new NullPointerException();
