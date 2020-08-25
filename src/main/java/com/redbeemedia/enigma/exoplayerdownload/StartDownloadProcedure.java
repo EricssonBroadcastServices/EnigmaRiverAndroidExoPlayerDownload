@@ -2,7 +2,6 @@ package com.redbeemedia.enigma.exoplayerdownload;
 
 import android.net.Uri;
 import android.util.Base64;
-import android.util.Log;
 
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.Format;
@@ -12,9 +11,9 @@ import com.google.android.exoplayer2.drm.FrameworkMediaCrypto;
 import com.google.android.exoplayer2.drm.OfflineLicenseHelper;
 import com.google.android.exoplayer2.offline.DownloadHelper;
 import com.google.android.exoplayer2.offline.DownloadRequest;
+import com.google.android.exoplayer2.offline.StreamKey;
 import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.TrackGroupArray;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
@@ -40,13 +39,15 @@ import com.redbeemedia.enigma.core.json.JsonObjectResponseHandler;
 import com.redbeemedia.enigma.core.session.ISession;
 import com.redbeemedia.enigma.core.util.AndroidThreadUtil;
 import com.redbeemedia.enigma.core.util.UrlPath;
+import com.redbeemedia.enigma.download.AudioDownloadable;
 import com.redbeemedia.enigma.download.DownloadStartRequest;
 import com.redbeemedia.enigma.download.EnigmaDownloadContext;
+import com.redbeemedia.enigma.download.IDownloadablePart;
 import com.redbeemedia.enigma.download.IMetadataManager;
+import com.redbeemedia.enigma.download.SubtitleDownloadable;
 import com.redbeemedia.enigma.download.VideoDownloadable;
 import com.redbeemedia.enigma.download.resulthandler.BaseResultHandler;
 import com.redbeemedia.enigma.download.resulthandler.IDownloadStartResultHandler;
-import com.redbeemedia.enigma.exoplayerintegration.ExoUtil;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -56,6 +57,8 @@ import org.w3c.dom.Element;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -141,9 +144,18 @@ import java.util.Map;
                 downloadHelper.prepare(new DownloadHelper.Callback() {
                     @Override
                     public void onPrepared(DownloadHelper helper) {
+                        List<StreamKey> streamKeys = new ArrayList<>();
+
                         for(int periodIndex = 0; periodIndex < helper.getPeriodCount(); ++periodIndex) {
                             MappingTrackSelector.MappedTrackInfo mappedTrackInfo = helper.getMappedTrackInfo(periodIndex);
-                            helper.replaceTrackSelections(periodIndex, getTrackSelectorParameters(mappedTrackInfo));
+
+                            for(int rendererIndex = 0; rendererIndex < mappedTrackInfo.getRendererCount(); ++rendererIndex) {
+                                IFormatMatcher formatMatcher = getFormatMatcher(mappedTrackInfo, rendererIndex);
+                                if(formatMatcher != null) {
+                                    IFormatMatchHandler matchHandler = new StreamKeyListBuilder(helper, periodIndex, rendererIndex, streamKeys);
+                                    findMatchingFormats(mappedTrackInfo, rendererIndex, formatMatcher, matchHandler);
+                                }
+                            }
                         }
                         AndroidThreadUtil.runOnUiThread(() -> {
                             try {
@@ -154,7 +166,8 @@ import java.util.Map;
                                 }
                                 IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
                                 metadataManager.store(contentId, metaData.getBytes());
-                                final DownloadRequest downloadRequest = helper.getDownloadRequest(contentId, null);
+                                String downloadType = getDownloadType(mediaFormat);
+                                final DownloadRequest downloadRequest = new DownloadRequest(contentId, downloadType, mediaUri, streamKeys, null, null);
                                 helper.release();
                                 ExoPlayerDownloadContext.sendAddDownload(downloadRequest, false);
                             } catch(RuntimeException e) {
@@ -176,7 +189,6 @@ import java.util.Map;
             }
         });
     }
-
 
 
     private void downloadWidevineLicense(EnigmaMediaFormat mediaFormat, Uri mediaUri, String licenseServerUri, String playToken, String requestId) throws ProcedureException {
@@ -242,56 +254,79 @@ import java.util.Map;
     }
 
 
-    private DefaultTrackSelector.Parameters getTrackSelectorParameters(MappingTrackSelector.MappedTrackInfo mappedTrackInfo) {
-        DefaultTrackSelector.ParametersBuilder selectorBuilder = new DefaultTrackSelector.ParametersBuilder();
-
-        VideoDownloadable video = request.getVideo();
-        if(video == null) {
-            //This is what DownloadHelper.DEFAULT_TRACK_SELECTOR_PARAMETERS does
-            selectorBuilder.setForceHighestSupportedBitrate(true);
+    private static String getDownloadType(EnigmaMediaFormat mediaFormat) {
+        EnigmaMediaFormat.StreamFormat streamFormat = mediaFormat.getStreamFormat();
+        if(streamFormat == EnigmaMediaFormat.StreamFormat.DASH) {
+            return DownloadRequest.TYPE_DASH;
+        } else if(streamFormat == EnigmaMediaFormat.StreamFormat.HLS) {
+            return DownloadRequest.TYPE_HLS;
+        } else if(streamFormat == EnigmaMediaFormat.StreamFormat.SMOOTHSTREAMING) {
+            return DownloadRequest.TYPE_SS;
         } else {
-            boolean success = overrideTrackSelection(selectorBuilder, mappedTrackInfo, ExoUtil.DEFAULT_VIDEO_RENDERER_INDEX, new IFormatMatcher() {
-                @Override
-                public boolean matches(Format format) {
-                    return format.bitrate == video.getBitrate();
-                }
-            });
-            if(!success) {
-                Log.d("ExoPlayerDownload", "Failed to select video track for download");
-            }
+            return DownloadRequest.TYPE_PROGRESSIVE;
         }
-
-        //This is where we will also add overrides for audio and text
-
-        return selectorBuilder.build();
     }
 
-    private static boolean overrideTrackSelection(DefaultTrackSelector.ParametersBuilder parametersBuilder,
-                                               MappingTrackSelector.MappedTrackInfo mappedTrackInfo,
-                                               int rendererIndex ,
-                                               IFormatMatcher formatMatcher) {
-        boolean atLeastOneOverrideMade = false;
+    private IFormatMatcher getFormatMatcher(MappingTrackSelector.MappedTrackInfo mappedTrackInfo, int rendererIndex) {
+        int rendererType = mappedTrackInfo.getRendererType(rendererIndex);
+        if(rendererType == C.TRACK_TYPE_VIDEO) {
+            VideoDownloadable video = request.getVideo();
+            if(video == null) {
+                return new MaxBitrateSelector(mappedTrackInfo, rendererIndex);
+            } else {
+                return (groupIndex, format) -> format.bitrate == video.getBitrate();
+            }
+        } else if(rendererType == C.TRACK_TYPE_AUDIO) {
+            List<AudioDownloadable> audios = request.getAudios();
+            if(audios.isEmpty()) {
+                return new MaxBitrateSelector(mappedTrackInfo, rendererIndex);
+            } else {
+                return createAnyMatcher(audios);
+            }
+        } else if(rendererType == C.TRACK_TYPE_TEXT) {
+            List<SubtitleDownloadable> subtitles = request.getSubtitles();
+            if(subtitles.isEmpty()) {
+                return new NoneSelector();
+            } else {
+                return createAnyMatcher(subtitles);
+            }
+        } else {
+            return null;
+        }
+    }
+
+    private static IntList getMaxBitrates(MappingTrackSelector.MappedTrackInfo mappedTrackInfo,
+                                          int rendererIndex) {
+        TrackGroupArray trackGroupArray = mappedTrackInfo.getTrackGroups(rendererIndex);
+        IntList maxBitrates = new IntList(trackGroupArray.length);
+        for(int groupIndex = 0; groupIndex < trackGroupArray.length; ++groupIndex) {
+            TrackGroup trackGroup = trackGroupArray.get(groupIndex);
+            int maxBitrate = -1;
+            for(int trackIndex = 0; trackIndex < trackGroup.length; ++trackIndex) {
+                Format format = trackGroup.getFormat(trackIndex);
+                if(format.bitrate > maxBitrate) {
+                    maxBitrate = format.bitrate;
+                }
+            }
+            maxBitrates.add(maxBitrate);
+        }
+        return maxBitrates;
+    }
+
+    private static void findMatchingFormats(MappingTrackSelector.MappedTrackInfo mappedTrackInfo,
+                                            int rendererIndex,
+                                            IFormatMatcher formatMatcher,
+                                            IFormatMatchHandler formatMatchHandler) {
         TrackGroupArray trackGroupArray = mappedTrackInfo.getTrackGroups(rendererIndex);
         for(int groupIndex = 0; groupIndex < trackGroupArray.length; ++groupIndex) {
             TrackGroup trackGroup = trackGroupArray.get(groupIndex);
-            IntList matchingTrackIndicesList = new IntList(trackGroup.length);
             for(int trackIndex = 0; trackIndex < trackGroup.length; ++trackIndex) {
-                if(formatMatcher.matches(trackGroup.getFormat(trackIndex))) {
-                    matchingTrackIndicesList.add(trackIndex);
+                Format format = trackGroup.getFormat(trackIndex);
+                if(formatMatcher.matches(groupIndex, format)) {
+                    formatMatchHandler.onMatch(groupIndex, trackIndex, format);
                 }
             }
-            int[] matchingTrackIndices = matchingTrackIndicesList.toArray();
-            if(matchingTrackIndices != null && matchingTrackIndices.length > 0) {
-                DefaultTrackSelector.SelectionOverride selectionOverride = new DefaultTrackSelector.SelectionOverride(groupIndex, matchingTrackIndices);
-                parametersBuilder.setSelectionOverride(rendererIndex, trackGroupArray, selectionOverride);
-                atLeastOneOverrideMade = true;
-            }
         }
-        return atLeastOneOverrideMade;
-    }
-
-    private interface IFormatMatcher {
-        boolean matches(Format format);
     }
 
     private static class IntList {
@@ -317,5 +352,77 @@ import java.util.Map;
             System.arraycopy(array, 0, trimmed, 0, trimmed.length);
             return trimmed;
         }
+
+        public boolean contains(int value) {
+            for(int i = 0; i < array.length; ++i) {
+                if(array[i] == value) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static class MaxBitrateSelector implements IFormatMatcher {
+        private final int[] maxBitrates;
+
+        public MaxBitrateSelector(MappingTrackSelector.MappedTrackInfo mappedTrackInfo, int rendererIndex) {
+            this.maxBitrates = getMaxBitrates(mappedTrackInfo, rendererIndex).toArray();
+        }
+
+        @Override
+        public boolean matches(int groupIndex, Format format) {
+            try {
+                return maxBitrates[groupIndex] == format.bitrate;
+            } catch (ArrayIndexOutOfBoundsException e) {
+                return false;
+            }
+        }
+    }
+
+    private static class NoneSelector implements IFormatMatcher {
+        @Override
+        public boolean matches(int groupIndex, Format format) {
+            return false;
+        }
+    }
+
+    private interface IFormatMatchHandler {
+        void onMatch(int groupIndex, int trackIndex, Format format);
+    }
+
+
+    private static class StreamKeyListBuilder implements IFormatMatchHandler {
+        private final DownloadHelper downloadHelper;
+        private final int periodIndex;
+        private final int rendererIndex;
+        private final List<StreamKey> streamKeys;
+
+        public StreamKeyListBuilder(DownloadHelper downloadHelper, int periodIndex, int rendererIndex, List<StreamKey> streamKeys) {
+            this.downloadHelper = downloadHelper;
+            this.periodIndex = periodIndex;
+            this.rendererIndex = rendererIndex;
+            this.streamKeys = streamKeys;
+        }
+
+        @Override
+        public void onMatch(int groupIndex, int trackIndex, Format format) {
+            streamKeys.add(new StreamKey(periodIndex, remapGroupIndex(groupIndex), trackIndex));
+        }
+
+        //Utility method to help overcome ExoPlayer's strange indexing
+        private int remapGroupIndex(int groupIndex) {
+            TrackGroupArray trackGroupArray = downloadHelper.getTrackGroups(periodIndex);
+            MappingTrackSelector.MappedTrackInfo mappedTrackInfo = downloadHelper.getMappedTrackInfo(periodIndex);
+            return trackGroupArray.indexOf(mappedTrackInfo.getTrackGroups(rendererIndex).get(groupIndex));
+        }
+    }
+
+    private static IFormatMatcher createAnyMatcher(Collection<? extends IDownloadablePart> selectedParts) {
+        List<IFormatMatcher> matchers = new ArrayList<>();
+        for(IDownloadablePart part : selectedParts) {
+            matchers.add(new ExoFormatMatcher(part.getRawJson()));
+        }
+        return new AnyFormatMatcher(matchers);
     }
 }
