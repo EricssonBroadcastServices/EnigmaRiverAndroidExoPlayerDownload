@@ -27,7 +27,7 @@ public class ExoFormatMatcherTest {
         objectBuilder.put("dashLang", "deu");
         ExoFormatMatcher exoFormatMatcher = new ExoFormatMatcher(objectBuilder.getJsonObject());
         Format format = createFormat(C.ROLE_FLAG_MAIN, null);
-        Assert.assertFalse(exoFormatMatcher.matches(0, format));
+        Assert.assertTrue(exoFormatMatcher.matches(0, format));
 
         objectBuilder.put("dashLang", null);
         exoFormatMatcher = new ExoFormatMatcher(objectBuilder.getJsonObject());
