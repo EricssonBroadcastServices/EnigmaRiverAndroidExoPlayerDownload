@@ -1,3 +1,3 @@
 # ExoPlayer Download
 
-The ExoPlayer download integration library, version r3.1.2-BETA-LogTest-5.
+The ExoPlayer download integration library, version r3.1.2-BETA-LogTest-6.
