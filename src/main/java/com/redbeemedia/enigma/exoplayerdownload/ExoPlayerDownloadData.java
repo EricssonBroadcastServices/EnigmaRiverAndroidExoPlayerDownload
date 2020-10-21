@@ -12,7 +12,6 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.google.android.exoplayer2.upstream.cache.Cache;
 import com.google.android.exoplayer2.upstream.cache.CacheDataSourceFactory;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
-import com.redbeemedia.enigma.exoplayerintegration.ExoPlayerIntegrationContext;
 import com.redbeemedia.enigma.exoplayerintegration.IMediaSourceFactory;
 import com.redbeemedia.enigma.exoplayerintegration.IOfflineDrmKeySource;
 import com.redbeemedia.enigma.exoplayerintegration.util.MediaSourceFactoryConfigurator;
@@ -39,7 +38,11 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
 
     @Override
     public byte[] getDrmKeys() {
-        return metaData.getDrmKey();
+        DrmLicenceInfo drmLicenceInfo = metaData.getDrmLicenceInfo();
+        if(drmLicenceInfo == null) {
+            return null;
+        }
+        return drmLicenceInfo.getDrmKey();
     }
 
     @Override

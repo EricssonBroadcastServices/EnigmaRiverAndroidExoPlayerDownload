@@ -135,7 +135,7 @@ import java.util.Map;
         }
     }
 
-    private void startDownload(EnigmaMediaFormat mediaFormat, Uri mediaUri, byte[] drmKey) throws ProcedureException {
+    private void startDownload(EnigmaMediaFormat mediaFormat, Uri mediaUri, DrmLicenceInfo drmLicenceInfo) throws ProcedureException {
         AndroidThreadUtil.runOnUiThread(() -> {
             try {
                 DataSource.Factory dataSourceFactory = ExoPlayerDownloadContext.getDataSourceFactory();
@@ -160,10 +160,7 @@ import java.util.Map;
                         AndroidThreadUtil.runOnUiThread(() -> {
                             try {
                                 String contentId = request.getContentId();
-                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId());
-                                if(drmKey != null) {
-                                    metaData.setDrmKey(drmKey);
-                                }
+                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo);
                                 IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
                                 metadataManager.store(contentId, metaData.getBytes());
                                 String downloadType = getDownloadType(mediaFormat);
@@ -211,10 +208,11 @@ import java.util.Map;
 
                         DrmInitData drmInitData = new DrmInitData(new DrmInitData.SchemeData(C.WIDEVINE_UUID, MimeTypes.VIDEO_MP4, initData));
                         byte[] licenceData = offlineLicenseHelper.downloadLicense(drmInitData);
+                        DrmLicenceInfo drmLicenceInfo = DrmLicenceInfo.create(licenceData, offlineLicenseHelper);
 
                         offlineLicenseHelper.release();
 
-                        startDownload(mediaFormat, mediaUri, licenceData);
+                        startDownload(mediaFormat, mediaUri, drmLicenceInfo);
                     } catch (ProcedureException e) {
                         resultHandler.onError(e.error);
                     } catch (Exception e) {

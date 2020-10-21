@@ -5,75 +5,62 @@ import android.util.Base64;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
+/*package-protected*/ class DownloadedAssetMetaData extends BaseJsonSerializable {
+    private static final int SAVE_FORMAT_VERSION = 2;
 
-/*package-protected*/ class DownloadedAssetMetaData {
     private static final String ASSET_ID = "ASSET_ID";
     private static final String DRM_KEY = "DRM_KEY";
+    private static final String DRM_LICENCE_INFO = "DRM_LICENCE_INFO";
 
     private final String assetId;
-    private String drmKey = null;
+    private DrmLicenceInfo drmLicenceInfo;
 
-    public DownloadedAssetMetaData(String assetId) {
+    public DownloadedAssetMetaData(String assetId, DrmLicenceInfo drmLicenceInfo) {
         this.assetId = assetId;
+        this.drmLicenceInfo = drmLicenceInfo;
     }
 
     public String getAssetId() {
         return assetId;
     }
 
-    public byte[] getBytes() {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos.write(1); //Save format version
-        try {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put(ASSET_ID, assetId);
-            jsonObject.put(DRM_KEY, drmKey);
-            byte[] jsonBytes = jsonObject.toString().getBytes(StandardCharsets.UTF_8);
-            baos.write(jsonBytes, 0, jsonBytes.length);
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-        return baos.toByteArray();
+
+    @Override
+    protected int storeInJson(JSONObject jsonObject) throws JSONException {
+        jsonObject.put(ASSET_ID, assetId);
+        jsonObject.put(DRM_LICENCE_INFO, DrmLicenceInfo.encodeToString(drmLicenceInfo));
+        return SAVE_FORMAT_VERSION;
     }
 
     public static DownloadedAssetMetaData fromBytes(byte[] data) {
-        if(data == null) {
-            return null;
-        }
-        byte saveFormatVersion = data[0];
-        if(saveFormatVersion == 1) {
-            String jsonData = new String(data, 1, data.length-1, StandardCharsets.UTF_8);
-            try {
-                JSONObject jsonObject = new JSONObject(jsonData);
+        return BaseJsonSerializable.fromBytes(data, DownloadedAssetMetaData.class, (saveFormatVersion, jsonObject) -> {
+            if(saveFormatVersion == 1) {
                 String assetId = jsonObject.getString(ASSET_ID);
-                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(assetId);
                 String drmKey = jsonObject.optString(DRM_KEY, null);
+                DrmLicenceInfo drmLicenceInfo = null;
                 if(drmKey != null) {
-                    metaData.drmKey = drmKey;
+                    drmLicenceInfo = new DrmLicenceInfo(Base64.decode(drmKey, Base64.DEFAULT), Long.MAX_VALUE);
                 }
-                return metaData;
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
+                return new DownloadedAssetMetaData(assetId, drmLicenceInfo);
+            } else if(saveFormatVersion == 2) {
+                String assetId = jsonObject.getString(ASSET_ID);
+                DrmLicenceInfo drmLicenceInfo = DrmLicenceInfo.decodeFromString(jsonObject.optString(DRM_LICENCE_INFO, null));
+                return new DownloadedAssetMetaData(assetId, drmLicenceInfo);
+            } else {
+                throw new IllegalArgumentException("Unknown download meta data save format: "+saveFormatVersion);
             }
-        } else {
-            throw new IllegalArgumentException("Unknown download meta data save format: "+saveFormatVersion);
-        }
+        });
     }
 
     public static DownloadedAssetMetaData newDefaultMetadata() {
-        return new DownloadedAssetMetaData("N/A");
+        return new DownloadedAssetMetaData("N/A", null);
     }
 
-    public void setDrmKey(byte[] drmKey) {
-        this.drmKey = Base64.encodeToString(drmKey, Base64.DEFAULT);
+    public DrmLicenceInfo getDrmLicenceInfo() {
+        return drmLicenceInfo;
     }
 
-    public byte[] getDrmKey() {
-        if(drmKey != null) {
-            return Base64.decode(drmKey, Base64.DEFAULT);
-        }
-        return null;
+    public void setDrmLicenceInfo(DrmLicenceInfo drmLicenceInfo) {
+        this.drmLicenceInfo = drmLicenceInfo;
     }
 }
