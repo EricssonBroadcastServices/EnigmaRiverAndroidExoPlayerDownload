@@ -12,6 +12,7 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.google.android.exoplayer2.upstream.cache.Cache;
 import com.google.android.exoplayer2.upstream.cache.CacheDataSourceFactory;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
+import com.redbeemedia.enigma.download.IDrmLicence;
 import com.redbeemedia.enigma.exoplayerintegration.IMediaSourceFactory;
 import com.redbeemedia.enigma.exoplayerintegration.IOfflineDrmKeySource;
 import com.redbeemedia.enigma.exoplayerintegration.util.MediaSourceFactoryConfigurator;
@@ -43,6 +44,16 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
             return null;
         }
         return drmLicenceInfo.getDrmKey();
+    }
+
+    @Override
+    public IDrmLicence getDrmLicence() {
+        DrmLicenceInfo drmLicenceInfo = metaData.getDrmLicenceInfo();
+        if(drmLicenceInfo != null) {
+            return new WidevineDrmLicence(contentId, metaData);
+        } else {
+            return null;
+        }
     }
 
     @Override

@@ -53,21 +53,18 @@ import org.json.JSONObject;
         return Base64.decode(drmKey, Base64.DEFAULT);
     }
 
-    //TODO need to define what format this is in
     public long getExpirationTime() {
         return expirationTime;
     }
 
     public static DrmLicenceInfo create(byte[] offlineLicenseKeySetId, OfflineLicenseHelper<?> offlineLicenseHelper) throws DrmSession.DrmSessionException {
         Pair<Long, Long> remainingSec = offlineLicenseHelper.getLicenseDurationRemainingSec(offlineLicenseKeySetId);
-        long expirationTime = Math.min(remainingSec.first, remainingSec.second);
+        long remainingSeconds = Math.min(remainingSec.first, remainingSec.second);
+        long expirationTime = System.currentTimeMillis()+remainingSeconds*1000L;
         return new DrmLicenceInfo(offlineLicenseKeySetId, expirationTime);
     }
 
     public static DrmLicenceInfo decodeFromString(String base64String) {
-        if(base64String == null) {
-            return null;
-        }
-        return fromBytes(Base64.decode(base64String, Base64.DEFAULT));
+        return fromBytes(decodeFromBase64String(base64String));
     }
 }

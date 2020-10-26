@@ -25,6 +25,7 @@ import com.redbeemedia.enigma.core.drm.DrmInfoFactory;
 import com.redbeemedia.enigma.core.drm.IDrmInfo;
 import com.redbeemedia.enigma.core.error.EnigmaError;
 import com.redbeemedia.enigma.core.error.InternalError;
+import com.redbeemedia.enigma.core.error.MaxDownloadCountLimitReachedError;
 import com.redbeemedia.enigma.core.error.NoSupportedMediaFormatsError;
 import com.redbeemedia.enigma.core.error.UnexpectedError;
 import com.redbeemedia.enigma.core.error.UnsupportedMediaFormatError;
@@ -34,6 +35,8 @@ import com.redbeemedia.enigma.core.format.EnigmaMediaFormatUtil;
 import com.redbeemedia.enigma.core.format.IMediaFormatSelector;
 import com.redbeemedia.enigma.core.format.IMediaFormatSupportSpec;
 import com.redbeemedia.enigma.core.http.AuthenticatedExposureApiCall;
+import com.redbeemedia.enigma.core.http.ExposureHttpError;
+import com.redbeemedia.enigma.core.http.HttpStatus;
 import com.redbeemedia.enigma.core.http.IHttpCall;
 import com.redbeemedia.enigma.core.json.JsonObjectResponseHandler;
 import com.redbeemedia.enigma.core.session.ISession;
@@ -56,6 +59,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -77,7 +81,8 @@ import java.util.Map;
     }
 
     public void begin() {
-        UrlPath endpoint = businessUnit.getApiBaseUrl("v2").append("/entitlement/").append(request.getAssetId()).append("/download");
+        final String assetId = request.getAssetId();
+        UrlPath endpoint = businessUnit.getApiBaseUrl("v2").append("/entitlement/").append(assetId).append("/download");
         try {
             IHttpCall call = new AuthenticatedExposureApiCall("GET", session);
             EnigmaRiverContext.getHttpHandler().doHttp(endpoint.toURL(), call, new JsonObjectResponseHandler() {
@@ -90,6 +95,22 @@ import java.util.Map;
                     } catch (Exception e) {
                         resultHandler.onError(new UnexpectedError(e));
                     }
+                }
+
+                @Override
+                public void onResponse(HttpStatus status, InputStream inputStream) {
+                    if(status.getResponseCode() == 403) {
+                        try {
+                            ExposureHttpError exposureHttpError = ExposureHttpError.parse(inputStream);
+                            if("MAX_DOWNLOAD_COUNT_LIMIT_REACHED".equals(exposureHttpError.getMessage())) {
+                                resultHandler.onError(new MaxDownloadCountLimitReachedError(assetId));
+                                return;
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    super.onResponse(status, inputStream);
                 }
 
                 @Override
@@ -160,7 +181,7 @@ import java.util.Map;
                         AndroidThreadUtil.runOnUiThread(() -> {
                             try {
                                 String contentId = request.getContentId();
-                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo);
+                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo, request.getSession());
                                 IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
                                 metadataManager.store(contentId, metaData.getBytes());
                                 String downloadType = getDownloadType(mediaFormat);

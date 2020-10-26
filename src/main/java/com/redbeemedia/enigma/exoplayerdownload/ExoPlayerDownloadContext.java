@@ -27,9 +27,11 @@ import com.redbeemedia.enigma.core.context.IModuleInitializationSettings;
 import com.redbeemedia.enigma.core.context.ModuleInfo;
 import com.redbeemedia.enigma.core.context.exception.ModuleInitializationException;
 import com.redbeemedia.enigma.core.format.IMediaFormatSupportSpec;
+import com.redbeemedia.enigma.core.session.ISession;
 import com.redbeemedia.enigma.download.EnigmaDownload;
 import com.redbeemedia.enigma.download.EnigmaDownloadContext;
 import com.redbeemedia.enigma.download.IEnigmaDownloadImplementation;
+import com.redbeemedia.enigma.download.IMetadataManager;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -109,7 +111,6 @@ public class ExoPlayerDownloadContext {
         assertInitialized();
         return initializedContext.downloadCache;
     }
-
 
     private static void registerDownloadImplementation(IEnigmaDownloadImplementation downloadImplementation) throws ModuleInitializationException {
         try {
@@ -200,6 +201,14 @@ public class ExoPlayerDownloadContext {
                 public void onDownloadRemoved(DownloadManager downloadManager, Download download) {
                     String contentId = download.request.id;
                     EnigmaDownloadContext.getMetadataManager().clear(contentId);
+                }
+
+                @Override
+                public void onDownloadChanged(DownloadManager downloadManager, Download download) {
+                    if (download.state == Download.STATE_COMPLETED) {
+                        DownloadedAssetMetaData info = DownloadedAssetMetaData.fromBytes(EnigmaDownloadContext.getMetadataManager().load(download.request.id));
+                        new UpdateBookkeeperProcedure(info.getSession(), info.getAssetId()).begin();
+                    }
                 }
             });
         }

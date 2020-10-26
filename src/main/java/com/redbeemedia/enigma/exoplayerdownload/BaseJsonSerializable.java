@@ -1,5 +1,6 @@
 package com.redbeemedia.enigma.exoplayerdownload;
 
+import android.os.Parcelable;
 import android.util.Base64;
 
 import org.json.JSONException;
@@ -9,7 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 
 /*package-protected*/ abstract class BaseJsonSerializable implements IJsonSerializable {
-
 
     protected static <T> T fromBytes(byte[] data, Class<T> returnType, IJsonDeserializer<T> deserializer) {
         if(data == null) {
@@ -40,12 +40,27 @@ import java.nio.charset.StandardCharsets;
         return baos.toByteArray();
     }
 
-
     public static String encodeToString(IJsonSerializable serializable) {
         if(serializable == null) {
             return null;
         }
-        return Base64.encodeToString(serializable.getBytes(), Base64.DEFAULT);
+        return encodeToString(serializable.getBytes());
+    }
+
+
+    public static String encodeToString(Parcelable parcelable) {
+        return encodeToString(JsonSerializableUtil.asJsonSerializable(parcelable));
+    }
+
+    public static byte[] decodeFromBase64String(String string) {
+        if(string == null) {
+            return null;
+        }
+        return Base64.decode(string, Base64.DEFAULT);
+    }
+
+    protected static String encodeToString(byte bytes[]) {
+        return Base64.encodeToString(bytes, Base64.DEFAULT);
     }
 
     protected abstract int storeInJson(JSONObject jsonObject) throws JSONException;
