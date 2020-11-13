@@ -27,11 +27,9 @@ import com.redbeemedia.enigma.core.context.IModuleInitializationSettings;
 import com.redbeemedia.enigma.core.context.ModuleInfo;
 import com.redbeemedia.enigma.core.context.exception.ModuleInitializationException;
 import com.redbeemedia.enigma.core.format.IMediaFormatSupportSpec;
-import com.redbeemedia.enigma.core.session.ISession;
 import com.redbeemedia.enigma.download.EnigmaDownload;
 import com.redbeemedia.enigma.download.EnigmaDownloadContext;
 import com.redbeemedia.enigma.download.IEnigmaDownloadImplementation;
-import com.redbeemedia.enigma.download.IMetadataManager;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -53,6 +51,7 @@ public class ExoPlayerDownloadContext {
     public static class Initialization implements IModuleInitializationSettings {
         private String userAgent = "enigma_river_downloader";
         private IMediaFormatSupportSpec downloadSupportSpec = new DefaultMediaFormatSupportSpec();
+        private int downloadManagerRefreshRateMillis = 500;
 
         public String getUserAgent() {
             return userAgent;
@@ -70,6 +69,15 @@ public class ExoPlayerDownloadContext {
         public IMediaFormatSupportSpec getDownloadSupportSpec() {
             return downloadSupportSpec;
         }
+
+        public Initialization setDownloadManagerRefreshRateMillis(int downloadManagerRefreshRateMillis) {
+            this.downloadManagerRefreshRateMillis = downloadManagerRefreshRateMillis;
+            return this;
+        }
+
+        public int getDownloadManagerRefreshRateMillis() {
+            return downloadManagerRefreshRateMillis;
+        }
     }
 
     /**
@@ -84,7 +92,6 @@ public class ExoPlayerDownloadContext {
             throw new IllegalStateException(NAME+" already initialized.");
         }
     }
-
 
     public static DataSource.Factory getDataSourceFactory() {
         assertInitialized();
@@ -143,21 +150,50 @@ public class ExoPlayerDownloadContext {
         }
     }
 
-    /*package-protected*/ static void sendAddDownload(DownloadRequest downloadRequest, boolean foreground) {
+    /*package-protected*/ static void sendAddDownload(DownloadRequest downloadRequest) {
         assertInitialized();
         DownloadService.sendAddDownload(
                 initializedContext.application,
                 EnigmaExoPlayerDownloadService.class,
                 downloadRequest,
-                foreground);
+                false);
     }
 
-    /*package-preotected*/ static void sendRemoveDownload(String contentId, boolean foreground) {
+    /*package-preotected*/ static void sendRemoveDownload(String contentId) {
         assertInitialized();
         DownloadService.sendRemoveDownload(initializedContext.application,
                 EnigmaExoPlayerDownloadService.class,
                 contentId,
-                foreground);
+                false);
+    }
+
+    /*package-protected*/ static void sendPauseDownload(String contentId) {
+        assertInitialized();
+        int stopReason = EnigmaExoPlayerDownloadService.STOP_REASON_PAUSED;
+        ExoPlayerDownloadContext.getDownloadManager().setStopReason(contentId, stopReason);
+        EnigmaExoPlayerDownloadService.sendSetStopReason(
+                initializedContext.application,
+                EnigmaExoPlayerDownloadService.class,
+                contentId,
+                stopReason,
+                false);
+    }
+
+    /*package-protected*/ static void sendResumeDownload(String contentId) {
+        assertInitialized();
+        int stopReason = Download.STOP_REASON_NONE;
+        ExoPlayerDownloadContext.getDownloadManager().setStopReason(contentId, stopReason);
+        EnigmaExoPlayerDownloadService.sendSetStopReason(
+                initializedContext.application,
+                EnigmaExoPlayerDownloadService.class,
+                contentId,
+                stopReason,
+                false);
+    }
+
+    /*package-protected*/ static IEnigmaAssetDownloadManager getEnigmaAssetDownloadManager() {
+        assertInitialized();
+        return initializedContext.enigmaAssetDownloadManager;
     }
 
     private static class InitializedContext {
@@ -167,6 +203,7 @@ public class ExoPlayerDownloadContext {
         private final IMediaFormatSupportSpec downloadSupportSpec;
         private final Cache downloadCache;
         private final DownloadManager downloadManager;
+        private final IEnigmaAssetDownloadManager enigmaAssetDownloadManager;
 
         public InitializedContext(IModuleContextInitialization initialization) {
             this.application = initialization.getApplication();
@@ -211,6 +248,10 @@ public class ExoPlayerDownloadContext {
                     }
                 }
             });
+
+            EnigmaAssetDownloadManager defaultDownloadManager = new EnigmaAssetDownloadManager(moduleSettings.downloadManagerRefreshRateMillis);
+            downloadManager.addListener(defaultDownloadManager.createDownloadManagerListener());
+            enigmaAssetDownloadManager = defaultDownloadManager;
         }
     }
 }

@@ -105,7 +105,7 @@ import java.util.concurrent.TimeoutException;
                     throw new RuntimeException(e);
                 }
             });
-            exceptionHandler.catchExceptions(() -> ExoPlayerDownloadContext.sendRemoveDownload(contentIdToRemove, false));
+            exceptionHandler.catchExceptions(() -> ExoPlayerDownloadContext.sendRemoveDownload(contentIdToRemove));
             exceptionHandler.catchExceptions(() -> EnigmaDownloadContext.getMetadataManager().clear(contentIdToRemove));
             exceptionHandler.rethrowIfAnyExceptions();
         }

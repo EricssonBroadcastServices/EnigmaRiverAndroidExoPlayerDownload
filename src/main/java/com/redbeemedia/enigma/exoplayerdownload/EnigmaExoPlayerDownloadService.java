@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Objects;
 
 public class EnigmaExoPlayerDownloadService extends DownloadService {
+  /*package-protected*/ static final int STOP_REASON_PAUSED = 1;
+
   private static final String CHANNEL_ID = "download_channel";
   private static final int JOB_ID = 1;
   private static final int FOREGROUND_NOTIFICATION_ID = 1;
@@ -127,7 +129,7 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
     } else if (download.state == Download.STATE_FAILED) {
       notification =
           notificationHelper.buildDownloadFailedNotification(
-              R.drawable.ic_download_done,
+                R.drawable.ic_download_error,
               /* contentIntent= */ null,
               Util.fromUtf8Bytes(download.request.data));
     } else {

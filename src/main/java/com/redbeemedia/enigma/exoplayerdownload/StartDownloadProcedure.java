@@ -187,7 +187,7 @@ import java.util.Map;
                                 String downloadType = getDownloadType(mediaFormat);
                                 final DownloadRequest downloadRequest = new DownloadRequest(contentId, downloadType, mediaUri, streamKeys, null, null);
                                 helper.release();
-                                ExoPlayerDownloadContext.sendAddDownload(downloadRequest, false);
+                                ExoPlayerDownloadContext.sendAddDownload(downloadRequest);
                             } catch(RuntimeException e) {
                                 resultHandler.onError(new UnexpectedError(e));
                                 return;
