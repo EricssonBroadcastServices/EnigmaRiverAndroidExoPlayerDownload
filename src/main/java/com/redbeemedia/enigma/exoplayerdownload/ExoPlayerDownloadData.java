@@ -38,6 +38,11 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
     }
 
     @Override
+    public Long getFileSize() {
+        return metaData.getFileSize();
+    }
+
+    @Override
     public byte[] getDrmKeys() {
         DrmLicenceInfo drmLicenceInfo = metaData.getDrmLicenceInfo();
         if(drmLicenceInfo == null) {

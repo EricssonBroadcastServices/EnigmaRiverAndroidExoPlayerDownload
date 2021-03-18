@@ -1,5 +1,7 @@
 package com.redbeemedia.enigma.exoplayerdownload;
 
+import android.util.Log;
+
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadCursor;
 import com.google.android.exoplayer2.offline.DownloadIndex;
@@ -31,6 +33,8 @@ import java.util.List;
 
                 IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
                 DownloadedAssetMetaData metaData = DownloadedAssetMetaData.fromBytes(metadataManager.load(download.request.id));
+
+                metaData.setFileSize(download.getBytesDownloaded());
 
                 DownloadedPlayable.IInternalDownloadData downloadData = new ExoPlayerDownloadData(download.request.id, metaData);
                 playables.add(new DownloadedPlayable(downloadData));

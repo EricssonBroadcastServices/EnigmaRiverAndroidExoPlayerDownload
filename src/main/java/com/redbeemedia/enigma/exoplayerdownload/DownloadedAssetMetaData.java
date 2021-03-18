@@ -19,6 +19,7 @@ import org.json.JSONObject;
     private final String assetId;
     private final ISession session;
     private DrmLicenceInfo drmLicenceInfo;
+    private Long fileSize = 0L;
 
     public DownloadedAssetMetaData(String assetId, DrmLicenceInfo drmLicenceInfo, ISession session) {
         this.assetId = assetId;
@@ -28,6 +29,14 @@ import org.json.JSONObject;
 
     public String getAssetId() {
         return assetId;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
     }
 
     @Override
