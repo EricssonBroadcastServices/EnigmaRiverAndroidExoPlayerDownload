@@ -1,12 +1,15 @@
 package com.redbeemedia.enigma.exoplayerdownload;
 
+import android.content.Context;
 import android.net.Uri;
 import android.util.Base64;
 
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.Format;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.RenderersFactory;
 import com.google.android.exoplayer2.drm.DrmInitData;
+import com.google.android.exoplayer2.drm.DrmSessionEventListener;
 import com.google.android.exoplayer2.drm.FrameworkMediaCrypto;
 import com.google.android.exoplayer2.drm.OfflineLicenseHelper;
 import com.google.android.exoplayer2.offline.DownloadHelper;
@@ -60,6 +63,7 @@ import org.w3c.dom.Element;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,12 +76,14 @@ import java.util.Map;
     private final ISession session;
     private final DownloadStartRequest request;
     private final IDownloadStartResultHandler resultHandler;
+    private final WeakReference<Context> context;
 
-    public StartDownloadProcedure(IBusinessUnit businessUnit, DownloadStartRequest request, IDownloadStartResultHandler resultHandler) {
+    public StartDownloadProcedure(Context context, IBusinessUnit businessUnit, DownloadStartRequest request, IDownloadStartResultHandler resultHandler) {
         this.businessUnit = businessUnit;
         this.session = request.getSession();
         this.request = request;
         this.resultHandler = resultHandler;
+        this.context = new WeakReference<>(context);
     }
 
     public void begin() {
@@ -159,9 +165,13 @@ import java.util.Map;
     private void startDownload(EnigmaMediaFormat mediaFormat, Uri mediaUri, DrmLicenceInfo drmLicenceInfo) throws ProcedureException {
         AndroidThreadUtil.runOnUiThread(() -> {
             try {
+                if(context.get() == null) {
+                    resultHandler.onError(new UnexpectedError("Failed to prepare DownloadHelper. Context was null"));
+                    return;
+                }
                 DataSource.Factory dataSourceFactory = ExoPlayerDownloadContext.getDataSourceFactory();
                 RenderersFactory renderersFactory = ExoPlayerDownloadContext.getRenderersFactory();
-                DownloadHelper downloadHelper = getDownloadHelper(mediaFormat, mediaUri, dataSourceFactory, renderersFactory);
+                DownloadHelper downloadHelper = getDownloadHelper(context.get(), mediaFormat, mediaUri, dataSourceFactory, renderersFactory);
                 downloadHelper.prepare(new DownloadHelper.Callback() {
                     @Override
                     public void onPrepared(DownloadHelper helper) {
@@ -184,8 +194,7 @@ import java.util.Map;
                                 DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo, request.getSession());
                                 IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
                                 metadataManager.store(contentId, metaData.getBytes());
-                                String downloadType = getDownloadType(mediaFormat);
-                                final DownloadRequest downloadRequest = new DownloadRequest(contentId, downloadType, mediaUri, streamKeys, null, null);
+                                final DownloadRequest downloadRequest = new DownloadRequest.Builder(contentId, mediaUri).setStreamKeys(streamKeys).build();
                                 helper.release();
                                 ExoPlayerDownloadContext.sendAddDownload(downloadRequest);
                             } catch(RuntimeException e) {
@@ -225,10 +234,14 @@ import java.util.Map;
                         for(Map.Entry<String, String> entry : drmInfo.getDrmKeyRequestProperties()) {
                             optional.put(entry.getKey(), entry.getValue());
                         }
-                        OfflineLicenseHelper<FrameworkMediaCrypto> offlineLicenseHelper = OfflineLicenseHelper.newWidevineInstance(licenseServerUri, false, dataSourceFactory, optional);
+                        OfflineLicenseHelper offlineLicenseHelper = OfflineLicenseHelper.newWidevineInstance(
+                                licenseServerUri,
+                                false,
+                                dataSourceFactory,
+                                new DrmSessionEventListener.EventDispatcher());
 
                         DrmInitData drmInitData = new DrmInitData(new DrmInitData.SchemeData(C.WIDEVINE_UUID, MimeTypes.VIDEO_MP4, initData));
-                        byte[] licenceData = offlineLicenseHelper.downloadLicense(drmInitData);
+                        byte[] licenceData = offlineLicenseHelper.downloadLicense(new Format.Builder().setDrmInitData(drmInitData).build());
                         DrmLicenceInfo drmLicenceInfo = DrmLicenceInfo.create(licenceData, offlineLicenseHelper);
 
                         offlineLicenseHelper.release();
@@ -251,39 +264,25 @@ import java.util.Map;
         }
     }
 
-    private DownloadHelper getDownloadHelper(EnigmaMediaFormat enigmaMediaFormat, Uri mediaUri, DataSource.Factory dataSourceFactory, RenderersFactory renderersFactory) {
+    private DownloadHelper getDownloadHelper(Context context, EnigmaMediaFormat enigmaMediaFormat, Uri mediaUri, DataSource.Factory dataSourceFactory, RenderersFactory renderersFactory) {
         EnigmaMediaFormat.DrmTechnology drmTechnology = enigmaMediaFormat.getDrmTechnology();
         EnigmaMediaFormat.StreamFormat streamFormat = enigmaMediaFormat.getStreamFormat();
         if(drmTechnology == EnigmaMediaFormat.DrmTechnology.NONE) {
             if(streamFormat == EnigmaMediaFormat.StreamFormat.DASH) {
-                return DownloadHelper.forDash(mediaUri, dataSourceFactory, renderersFactory);
+                return DownloadHelper.forMediaItem(context, MediaItem.fromUri(mediaUri), renderersFactory, dataSourceFactory);
             } else if(streamFormat == EnigmaMediaFormat.StreamFormat.HLS) {
-                return DownloadHelper.forHls(mediaUri, dataSourceFactory, renderersFactory);
+                return DownloadHelper.forMediaItem(context, MediaItem.fromUri(mediaUri), renderersFactory, dataSourceFactory);
             } else if (streamFormat == EnigmaMediaFormat.StreamFormat.SMOOTHSTREAMING) {
-                return DownloadHelper.forSmoothStreaming(mediaUri, dataSourceFactory, renderersFactory);
+                return DownloadHelper.forMediaItem(context, MediaItem.fromUri(mediaUri), renderersFactory, dataSourceFactory);
             } else {
                 throw new RuntimeException("Unsupported stream format: "+streamFormat);
             }
         } else if(drmTechnology == EnigmaMediaFormat.DrmTechnology.WIDEVINE) {
             if(streamFormat == EnigmaMediaFormat.StreamFormat.DASH) {
-                return DownloadHelper.forDash(mediaUri, dataSourceFactory, renderersFactory);
+                return DownloadHelper.forMediaItem(context, MediaItem.fromUri(mediaUri), renderersFactory, dataSourceFactory);
             }
         }
         throw new RuntimeException("Unsupported DRM technology: "+drmTechnology);
-    }
-
-
-    private static String getDownloadType(EnigmaMediaFormat mediaFormat) {
-        EnigmaMediaFormat.StreamFormat streamFormat = mediaFormat.getStreamFormat();
-        if(streamFormat == EnigmaMediaFormat.StreamFormat.DASH) {
-            return DownloadRequest.TYPE_DASH;
-        } else if(streamFormat == EnigmaMediaFormat.StreamFormat.HLS) {
-            return DownloadRequest.TYPE_HLS;
-        } else if(streamFormat == EnigmaMediaFormat.StreamFormat.SMOOTHSTREAMING) {
-            return DownloadRequest.TYPE_SS;
-        } else {
-            return DownloadRequest.TYPE_PROGRESSIVE;
-        }
     }
 
     private IFormatMatcher getFormatMatcher(MappingTrackSelector.MappedTrackInfo mappedTrackInfo, int rendererIndex) {

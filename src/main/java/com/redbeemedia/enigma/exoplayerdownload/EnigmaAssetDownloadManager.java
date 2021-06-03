@@ -3,6 +3,8 @@ package com.redbeemedia.enigma.exoplayerdownload;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.Nullable;
+
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadManager;
 import com.google.android.exoplayer2.scheduler.Requirements;
@@ -56,12 +58,16 @@ import java.util.Map;
             }
 
             @Override
-            public void onDownloadChanged(DownloadManager downloadManager, Download download) {
-                synchronized (exoPlayerDownloads) {
-                    exoPlayerDownloads.put(download.request.id, download);
+            public void onDownloadChanged(DownloadManager downloadManager, Download download, @Nullable Exception finalException) {
+                if(finalException == null) {
+                    synchronized (exoPlayerDownloads) {
+                        exoPlayerDownloads.put(download.request.id, download);
+                    }
+                    sync();
+                    repeater.setEnabled(true);
+                } else {
+                    finalException.printStackTrace();
                 }
-                sync();
-                repeater.setEnabled(true);
             }
 
             @Override

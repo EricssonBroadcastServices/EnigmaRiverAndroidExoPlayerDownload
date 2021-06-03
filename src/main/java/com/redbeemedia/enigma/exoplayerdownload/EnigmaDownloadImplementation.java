@@ -1,5 +1,7 @@
 package com.redbeemedia.enigma.exoplayerdownload;
 
+import android.content.Context;
+
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadCursor;
 import com.google.android.exoplayer2.offline.DownloadIndex;
@@ -17,8 +19,8 @@ import java.util.List;
 
 /*package-protected*/ class EnigmaDownloadImplementation implements IEnigmaDownloadImplementation {
     @Override
-    public void startAssetDownload(IBusinessUnit businessUnit, DownloadStartRequest request, IDownloadStartResultHandler resultHandler) {
-        new StartDownloadProcedure(businessUnit, request, resultHandler)
+    public void startAssetDownload(Context context, IBusinessUnit businessUnit, DownloadStartRequest request, IDownloadStartResultHandler resultHandler) {
+        new StartDownloadProcedure(context, businessUnit, request, resultHandler)
                 .begin();
     }
 

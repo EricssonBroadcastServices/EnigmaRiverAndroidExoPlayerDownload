@@ -3,7 +3,7 @@ package com.redbeemedia.enigma.exoplayerdownload;
 import android.net.Uri;
 
 import com.google.android.exoplayer2.drm.DrmSession;
-import com.google.android.exoplayer2.drm.FrameworkMediaCrypto;
+import com.google.android.exoplayer2.drm.DrmSessionEventListener;
 import com.google.android.exoplayer2.drm.OfflineLicenseHelper;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
@@ -134,11 +134,15 @@ import java.util.Map;
                     try {
                         HttpDataSource.Factory dataSourceFactory = new DefaultHttpDataSourceFactory("license_renewer");
                         IDrmInfo drmInfo = DrmInfoFactory.createWidevineDrmInfo(licenseServerUri, playToken, requestId);
+
                         HashMap<String, String> optional = new HashMap<>();
                         for(Map.Entry<String, String> entry : drmInfo.getDrmKeyRequestProperties()) {
                             optional.put(entry.getKey(), entry.getValue());
                         }
-                        OfflineLicenseHelper<FrameworkMediaCrypto> offlineLicenseHelper = OfflineLicenseHelper.newWidevineInstance(licenseServerUri, false, dataSourceFactory, optional);
+                        OfflineLicenseHelper offlineLicenseHelper = OfflineLicenseHelper.newWidevineInstance(
+                                licenseServerUri,
+                                false,
+                                dataSourceFactory, new DrmSessionEventListener.EventDispatcher());
                         try {
                             renewLicence(offlineLicenseHelper);
                         } finally {
@@ -194,7 +198,7 @@ import java.util.Map;
         }
     }
 
-    private void renewLicence(OfflineLicenseHelper<FrameworkMediaCrypto> offlineLicenseHelper) throws ProcedureException, DrmSession.DrmSessionException {
+    private void renewLicence(OfflineLicenseHelper offlineLicenseHelper) throws ProcedureException, DrmSession.DrmSessionException {
         DrmLicenceInfo drmLicenceInfo = metaData.getDrmLicenceInfo();
         if(drmLicenceInfo == null) {
             throw new ProcedureException(new InternalError("Missing existing licence, can not renew."));

@@ -59,33 +59,21 @@ public class ExoFormatMatcherTest {
     }
 
     private static Format createFormat(int roleFlags, String language) {
-        return Format.createContainerFormat(
-                null,
-                null,
-                null,
-                null,
-                null,
-                123,
-                0,
-                roleFlags,
-                language
-        );
+        return new Format.Builder().setAverageBitrate(123).setRoleFlags(roleFlags).setLanguage(language).build();
     }
 
     private static Format createFormat(int roleFlags, String language, int channelCount) {
         Format format = createFormat(roleFlags, language);
-        return format.copyWithContainerInfo(
-                format.id,
-                format.label,
-                format.sampleMimeType,
-                format.codecs,
-                format.metadata,
-                format.bitrate,
-                format.width,
-                format.height,
-                channelCount,
-                format.selectionFlags,
-                format.language
-        );
+        return format.buildUpon().setId(format.id).setLabel(format.label)
+                .setSampleMimeType(format.sampleMimeType)
+                .setCodecs(format.codecs)
+                .setMetadata(format.metadata)
+                .setAverageBitrate(format.averageBitrate)
+                .setPeakBitrate(format.peakBitrate)
+                .setWidth(format.width)
+                .setHeight(format.height)
+                .setChannelCount(channelCount)
+                .setSelectionFlags(format.selectionFlags)
+                .setLanguage(format.language).build();
     }
 }

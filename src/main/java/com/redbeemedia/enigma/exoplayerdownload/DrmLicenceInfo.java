@@ -57,7 +57,7 @@ import org.json.JSONObject;
         return expirationTime;
     }
 
-    public static DrmLicenceInfo create(byte[] offlineLicenseKeySetId, OfflineLicenseHelper<?> offlineLicenseHelper) throws DrmSession.DrmSessionException {
+    public static DrmLicenceInfo create(byte[] offlineLicenseKeySetId, OfflineLicenseHelper offlineLicenseHelper) throws DrmSession.DrmSessionException {
         Pair<Long, Long> remainingSec = offlineLicenseHelper.getLicenseDurationRemainingSec(offlineLicenseKeySetId);
         long remainingSeconds = Math.min(remainingSec.first, remainingSec.second);
         long expirationTime = System.currentTimeMillis()+remainingSeconds*1000L;

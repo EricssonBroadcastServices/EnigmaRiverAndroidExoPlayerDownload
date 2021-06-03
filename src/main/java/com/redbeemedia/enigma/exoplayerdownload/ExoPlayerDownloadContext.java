@@ -2,21 +2,19 @@ package com.redbeemedia.enigma.exoplayerdownload;
 
 import android.app.Application;
 
+import androidx.annotation.Nullable;
+
 import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.RenderersFactory;
 import com.google.android.exoplayer2.database.ExoDatabaseProvider;
 import com.google.android.exoplayer2.offline.DefaultDownloadIndex;
-import com.google.android.exoplayer2.offline.DefaultDownloaderFactory;
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadManager;
 import com.google.android.exoplayer2.offline.DownloadRequest;
 import com.google.android.exoplayer2.offline.DownloadService;
-import com.google.android.exoplayer2.offline.DownloaderConstructorHelper;
 import com.google.android.exoplayer2.offline.WritableDownloadIndex;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
-import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.upstream.cache.Cache;
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor;
 import com.google.android.exoplayer2.upstream.cache.SimpleCache;
@@ -86,7 +84,6 @@ public class ExoPlayerDownloadContext {
     private static synchronized void initialize(IModuleContextInitialization initialization) throws ModuleInitializationException {
         if(initializedContext == null) {
             initializedContext = new InitializedContext(initialization);
-
             registerDownloadImplementation(new EnigmaDownloadImplementation());
         } else {
             throw new IllegalStateException(NAME+" already initialized.");
@@ -217,21 +214,16 @@ public class ExoPlayerDownloadContext {
             downloadCache =
                     new SimpleCache(downloadContentDirectory, new NoOpCacheEvictor(), databaseProvider);
 
-            HttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSourceFactory("enigma_river_download");
-
-            DownloaderConstructorHelper downloaderConstructorHelper = new DownloaderConstructorHelper(downloadCache, httpDataSourceFactory);
-            downloadManager = new DownloadManager(
-                    application,
-                    downloadIndex,
-                    new DefaultDownloaderFactory(downloaderConstructorHelper));
-
             Initialization moduleSettings = initialization.getModuleSettings(MODULE_INFO);
 
             downloadSupportSpec = moduleSettings.downloadSupportSpec;
 
             dataSourceFactory = new DefaultDataSourceFactory(application, moduleSettings.userAgent);
 
+            downloadManager = new DownloadManager(application, databaseProvider, downloadCache, dataSourceFactory, command -> command.run());
+
             renderersFactory = new DefaultRenderersFactory(application);
+
 
             downloadManager.addListener(new DownloadManager.Listener() {
                 @Override
@@ -241,7 +233,7 @@ public class ExoPlayerDownloadContext {
                 }
 
                 @Override
-                public void onDownloadChanged(DownloadManager downloadManager, Download download) {
+                public void onDownloadChanged(DownloadManager downloadManager, Download download, @Nullable Exception finalException) {
                     if (download.state == Download.STATE_COMPLETED) {
                         DownloadedAssetMetaData info = DownloadedAssetMetaData.fromBytes(EnigmaDownloadContext.getMetadataManager().load(download.request.id));
                         new UpdateBookkeeperProcedure(info.getSession(), info.getAssetId()).begin();

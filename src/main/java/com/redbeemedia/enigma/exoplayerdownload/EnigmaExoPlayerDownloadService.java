@@ -114,7 +114,7 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
   @Override
   protected Notification getForegroundNotification(List<Download> downloads) {
     return notificationHelper.buildProgressNotification(
-        R.drawable.ic_download, /* contentIntent= */ null, /* message= */ null, downloads);
+            this.getApplicationContext(), R.drawable.ic_download, /* contentIntent= */ null, /* message= */ null, downloads);
   }
 
   @Override
@@ -123,12 +123,14 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
     if (download.state == Download.STATE_COMPLETED) {
       notification =
           notificationHelper.buildDownloadCompletedNotification(
+                  this.getApplicationContext(),
               R.drawable.ic_download_done,
               /* contentIntent= */ null,
               Util.fromUtf8Bytes(download.request.data));
     } else if (download.state == Download.STATE_FAILED) {
       notification =
           notificationHelper.buildDownloadFailedNotification(
+                  this.getApplicationContext(),
                 R.drawable.ic_download_error,
               /* contentIntent= */ null,
               Util.fromUtf8Bytes(download.request.data));
