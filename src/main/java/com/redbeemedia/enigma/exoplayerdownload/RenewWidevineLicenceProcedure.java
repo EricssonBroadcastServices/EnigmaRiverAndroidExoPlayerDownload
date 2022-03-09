@@ -5,7 +5,7 @@ import android.net.Uri;
 import com.google.android.exoplayer2.drm.DrmSession;
 import com.google.android.exoplayer2.drm.DrmSessionEventListener;
 import com.google.android.exoplayer2.drm.OfflineLicenseHelper;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.redbeemedia.enigma.core.context.EnigmaRiverContext;
 import com.redbeemedia.enigma.core.drm.DrmInfoFactory;
@@ -132,7 +132,9 @@ import java.util.Map;
                 @Override
                 public void onResult(Document document) {
                     try {
-                        HttpDataSource.Factory dataSourceFactory = new DefaultHttpDataSourceFactory("license_renewer");
+                        DefaultHttpDataSource.Factory factory = new DefaultHttpDataSource.Factory();
+                        factory.setUserAgent("license_renewer");
+                        HttpDataSource.Factory dataSourceFactory = factory;
                         IDrmInfo drmInfo = DrmInfoFactory.createWidevineDrmInfo(licenseServerUri, playToken, requestId);
 
                         HashMap<String, String> optional = new HashMap<>();

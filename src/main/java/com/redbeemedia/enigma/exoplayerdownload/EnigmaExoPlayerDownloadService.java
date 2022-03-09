@@ -6,6 +6,8 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 
+import androidx.annotation.Nullable;
+
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadManager;
 import com.google.android.exoplayer2.offline.DownloadService;
@@ -57,6 +59,12 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
     } else {
       return null;
     }
+  }
+
+  @Override
+  protected Notification getForegroundNotification(List<Download> downloads, int notMetRequirements) {
+    return notificationHelper.buildProgressNotification(
+            this.getApplicationContext(), R.drawable.ic_download, /* contentIntent= */ null, /* message= */ null, downloads);
   }
 
   private boolean canUsePlatformScheduler() {
@@ -111,32 +119,4 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
     }
   }
 
-  @Override
-  protected Notification getForegroundNotification(List<Download> downloads) {
-    return notificationHelper.buildProgressNotification(
-            this.getApplicationContext(), R.drawable.ic_download, /* contentIntent= */ null, /* message= */ null, downloads);
-  }
-
-  @Override
-  protected void onDownloadChanged(Download download) {
-    Notification notification;
-    if (download.state == Download.STATE_COMPLETED) {
-      notification =
-          notificationHelper.buildDownloadCompletedNotification(
-                  this.getApplicationContext(),
-              R.drawable.ic_download_done,
-              /* contentIntent= */ null,
-              Util.fromUtf8Bytes(download.request.data));
-    } else if (download.state == Download.STATE_FAILED) {
-      notification =
-          notificationHelper.buildDownloadFailedNotification(
-                  this.getApplicationContext(),
-                R.drawable.ic_download_error,
-              /* contentIntent= */ null,
-              Util.fromUtf8Bytes(download.request.data));
-    } else {
-      return;
-    }
-    NotificationUtil.setNotification(this, nextNotificationId++, notification);
-  }
 }

@@ -2,15 +2,16 @@ package com.redbeemedia.enigma.exoplayerdownload;
 
 import android.os.Parcel;
 
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadIndex;
 import com.google.android.exoplayer2.offline.StreamKey;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
 import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.cache.Cache;
-import com.google.android.exoplayer2.upstream.cache.CacheDataSourceFactory;
+import com.google.android.exoplayer2.upstream.cache.CacheDataSource;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
 import com.redbeemedia.enigma.download.IDrmLicence;
 import com.redbeemedia.enigma.exoplayerintegration.IMediaSourceFactory;
@@ -45,7 +46,7 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
     @Override
     public byte[] getDrmKeys() {
         DrmLicenceInfo drmLicenceInfo = metaData.getDrmLicenceInfo();
-        if(drmLicenceInfo == null) {
+        if (drmLicenceInfo == null) {
             return null;
         }
         return drmLicenceInfo.getDrmKey();
@@ -54,7 +55,7 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
     @Override
     public IDrmLicence getDrmLicence() {
         DrmLicenceInfo drmLicenceInfo = metaData.getDrmLicenceInfo();
-        if(drmLicenceInfo != null) {
+        if (drmLicenceInfo != null) {
             return new WidevineDrmLicence(contentId, metaData);
         } else {
             return null;
@@ -67,22 +68,28 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
             Cache downloadCache = ExoPlayerDownloadContext.getDownloadCache();
             DownloadIndex downloadIndex = ExoPlayerDownloadContext.getDownloadManager().getDownloadIndex();
             Download download = downloadIndex.getDownload(contentId);
-            if(download == null) {
+            if (download == null) {
                 throw new NullPointerException();
             }
 
-            DataSource.Factory upstreamDataSourceFactory = new DefaultHttpDataSourceFactory("enigma_river_download_complementor");
-            CacheDataSourceFactory dataSourceFactory = new CacheDataSourceFactory(
-                    downloadCache, upstreamDataSourceFactory);
+            DefaultHttpDataSource.Factory defaultHttpDataSourceFactory = new DefaultHttpDataSource.Factory();
+            defaultHttpDataSourceFactory.setUserAgent("enigma_river_download_complementor");
+            DataSource.Factory upstreamDataSourceFactory = defaultHttpDataSourceFactory;
+            CacheDataSource.Factory cacheDataSourceFactory = new CacheDataSource.Factory();
+            cacheDataSourceFactory.setCache(downloadCache);
+            cacheDataSourceFactory.setUpstreamDataSourceFactory(upstreamDataSourceFactory);
 
-            DashMediaSource.Factory factory = new DashMediaSource.Factory(dataSourceFactory);
+
+            DashMediaSource.Factory factory = new DashMediaSource.Factory(cacheDataSourceFactory);
+
             factory = configurator.configure(factory);
             List<StreamKey> keys = download.request.streamKeys;
-            if(keys != null) {
-                factory.setStreamKeys(keys);
+            MediaItem.Builder mediaBuilder = new MediaItem.Builder();
+            if (keys != null) {
+                mediaBuilder.setStreamKeys(keys);
             }
-
-            return factory.createMediaSource(download.request.uri);
+            mediaBuilder.setUri(download.request.uri);
+            return factory.createMediaSource(mediaBuilder.build());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

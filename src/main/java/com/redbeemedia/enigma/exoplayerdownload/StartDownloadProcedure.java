@@ -10,7 +10,6 @@ import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.RenderersFactory;
 import com.google.android.exoplayer2.drm.DrmInitData;
 import com.google.android.exoplayer2.drm.DrmSessionEventListener;
-import com.google.android.exoplayer2.drm.FrameworkMediaCrypto;
 import com.google.android.exoplayer2.drm.OfflineLicenseHelper;
 import com.google.android.exoplayer2.offline.DownloadHelper;
 import com.google.android.exoplayer2.offline.DownloadRequest;
@@ -19,7 +18,7 @@ import com.google.android.exoplayer2.source.TrackGroup;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
 import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.redbeemedia.enigma.core.businessunit.IBusinessUnit;
@@ -228,7 +227,9 @@ import java.util.Map;
                         String pssh = WidevineHelper.getPssh(elements);
                         byte[] initData = Base64.decode(pssh, Base64.DEFAULT);
 
-                        HttpDataSource.Factory dataSourceFactory = new DefaultHttpDataSourceFactory("license_downloader");
+                        DefaultHttpDataSource.Factory factory = new DefaultHttpDataSource.Factory();
+                        factory.setUserAgent("license_downloader");
+                        HttpDataSource.Factory dataSourceFactory = factory;
                         IDrmInfo drmInfo = DrmInfoFactory.createWidevineDrmInfo(licenseServerUri, playToken, requestId);
                         HashMap<String, String> optional = new HashMap<>();
                         for(Map.Entry<String, String> entry : drmInfo.getDrmKeyRequestProperties()) {
