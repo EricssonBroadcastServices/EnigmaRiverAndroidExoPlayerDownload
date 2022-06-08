@@ -96,6 +96,10 @@ import java.util.concurrent.TimeoutException;
         return stateMachine.getState();
     }
 
+    public DownloadedAssetMetaData getMetaData() {
+        return metaData;
+    }
+
     @Override
     public void pauseDownload(IControlResultHandler controlResultHandler) {
         AssetDownloadState state = stateMachine.getState();

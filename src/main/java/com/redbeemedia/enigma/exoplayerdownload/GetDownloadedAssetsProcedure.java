@@ -17,9 +17,16 @@ import java.util.List;
 
 /*package-protected*/ class GetDownloadedAssetsProcedure {
     private final IResultHandler<List<DownloadedPlayable>> resultHandler;
+    private final String userId;
 
     public GetDownloadedAssetsProcedure(IResultHandler<List<DownloadedPlayable>> resultHandler) {
         this.resultHandler = resultHandler;
+        this.userId = null;
+    }
+
+    public GetDownloadedAssetsProcedure(IResultHandler<List<DownloadedPlayable>> resultHandler, String userId) {
+        this.resultHandler = resultHandler;
+        this.userId = userId;
     }
 
     public void begin() {
@@ -37,6 +44,13 @@ import java.util.List;
                 metaData.setFileSize(download.getBytesDownloaded());
 
                 DownloadedPlayable.IInternalDownloadData downloadData = new ExoPlayerDownloadData(download.request.id, metaData);
+
+                if (userId != null) {
+                    if (!metaData.getSession().getUserId().equalsIgnoreCase(userId)) {
+                        continue;
+                    }
+                }
+
                 playables.add(new DownloadedPlayable(downloadData));
             }
         } catch (Exception e) {

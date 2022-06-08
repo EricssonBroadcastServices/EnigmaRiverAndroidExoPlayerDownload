@@ -31,6 +31,12 @@ import java.util.List;
     }
 
     @Override
+    public void getDownloadedAssets(String userId,IResultHandler<List<DownloadedPlayable>> resultHandler) {
+        new GetDownloadedAssetsProcedure(resultHandler, userId)
+                .begin();
+    }
+
+    @Override
     public void removeDownloadedAsset(DownloadedPlayable.IInternalDownloadData downloadData, IResultHandler<Void> resultHandler) {
         new RemoveDownloadedAssetProcedure(downloadData, resultHandler)
                 .begin();
@@ -39,5 +45,10 @@ import java.util.List;
     @Override
     public void getDownloadsInProgress(IResultHandler<List<IAssetDownload>> resultHandler) {
         ExoPlayerDownloadContext.getEnigmaAssetDownloadManager().getDownloadsInProgress(resultHandler);
+    }
+
+    @Override
+    public void getDownloadsInProgress(String userId, IResultHandler<List<IAssetDownload>> resultHandler) {
+        ExoPlayerDownloadContext.getEnigmaAssetDownloadManager().getDownloadsInProgress(userId,resultHandler);
     }
 }

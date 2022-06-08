@@ -159,4 +159,19 @@ import java.util.Map;
         }
         resultHandler.onResult(snapshot);
     }
+
+    @Override
+    public void getDownloadsInProgress(String userId, IResultHandler<List<IAssetDownload>> resultHandler) {
+        List<IAssetDownload> snapshot;
+        synchronized (ongoingDownloads) {
+            List<IAssetDownload> snapshotForUserId = new ArrayList<>();
+            for (ExoPlayerAssetDownload assetDownload : ongoingDownloads.values()) {
+                if (assetDownload.getMetaData().getSession().getUserId().equals(userId)) {
+                    snapshotForUserId.add(assetDownload);
+                }
+            }
+            snapshot = new ArrayList<>(snapshotForUserId);
+        }
+        resultHandler.onResult(snapshot);
+    }
 }

@@ -7,4 +7,6 @@ import java.util.List;
 
 /*package-protected*/ interface IEnigmaAssetDownloadManager {
     void getDownloadsInProgress(IResultHandler<List<IAssetDownload>> resultHandler);
+
+    void getDownloadsInProgress(String userId, IResultHandler<List<IAssetDownload>> resultHandler);
 }
