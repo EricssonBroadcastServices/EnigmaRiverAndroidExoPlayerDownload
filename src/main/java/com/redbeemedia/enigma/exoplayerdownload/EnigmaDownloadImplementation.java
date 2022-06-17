@@ -7,6 +7,7 @@ import com.google.android.exoplayer2.offline.DownloadCursor;
 import com.google.android.exoplayer2.offline.DownloadIndex;
 import com.redbeemedia.enigma.core.businessunit.IBusinessUnit;
 import com.redbeemedia.enigma.core.error.UnexpectedError;
+import com.redbeemedia.enigma.core.session.ISession;
 import com.redbeemedia.enigma.download.DownloadStartRequest;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
 import com.redbeemedia.enigma.download.IEnigmaDownloadImplementation;
@@ -31,8 +32,8 @@ import java.util.List;
     }
 
     @Override
-    public void getDownloadedAssets(String userId,IResultHandler<List<DownloadedPlayable>> resultHandler) {
-        new GetDownloadedAssetsProcedure(resultHandler, userId)
+    public void getDownloadedAssets(ISession session, IResultHandler<List<DownloadedPlayable>> resultHandler) {
+        new GetDownloadedAssetsProcedure(resultHandler, session)
                 .begin();
     }
 
@@ -48,7 +49,7 @@ import java.util.List;
     }
 
     @Override
-    public void getDownloadsInProgress(String userId, IResultHandler<List<IAssetDownload>> resultHandler) {
-        ExoPlayerDownloadContext.getEnigmaAssetDownloadManager().getDownloadsInProgress(userId,resultHandler);
+    public void getDownloadsInProgress(ISession session, IResultHandler<List<IAssetDownload>> resultHandler) {
+        ExoPlayerDownloadContext.getEnigmaAssetDownloadManager().getDownloadsInProgress(session,resultHandler);
     }
 }

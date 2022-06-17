@@ -1,32 +1,30 @@
 package com.redbeemedia.enigma.exoplayerdownload;
 
-import android.util.Log;
-
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadCursor;
 import com.google.android.exoplayer2.offline.DownloadIndex;
 import com.redbeemedia.enigma.core.error.UnexpectedError;
+import com.redbeemedia.enigma.core.session.ISession;
 import com.redbeemedia.enigma.download.DownloadedPlayable;
 import com.redbeemedia.enigma.download.EnigmaDownloadContext;
 import com.redbeemedia.enigma.download.IMetadataManager;
 import com.redbeemedia.enigma.download.resulthandler.IResultHandler;
-import com.redbeemedia.enigma.exoplayerintegration.ExoPlayerIntegrationContext;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /*package-protected*/ class GetDownloadedAssetsProcedure {
     private final IResultHandler<List<DownloadedPlayable>> resultHandler;
-    private final String userId;
+    private final ISession session;
 
     public GetDownloadedAssetsProcedure(IResultHandler<List<DownloadedPlayable>> resultHandler) {
         this.resultHandler = resultHandler;
-        this.userId = null;
+        this.session = null;
     }
 
-    public GetDownloadedAssetsProcedure(IResultHandler<List<DownloadedPlayable>> resultHandler, String userId) {
+    public GetDownloadedAssetsProcedure(IResultHandler<List<DownloadedPlayable>> resultHandler, ISession session) {
         this.resultHandler = resultHandler;
-        this.userId = userId;
+        this.session = session;
     }
 
     public void begin() {
@@ -45,8 +43,8 @@ import java.util.List;
 
                 DownloadedPlayable.IInternalDownloadData downloadData = new ExoPlayerDownloadData(download.request.id, metaData);
 
-                if (userId != null) {
-                    if (!metaData.getSession().getUserId().equalsIgnoreCase(userId)) {
+                if (session != null) {
+                    if (!metaData.getSession().getSessionToken().equals(session.getSessionToken())) {
                         continue;
                     }
                 }

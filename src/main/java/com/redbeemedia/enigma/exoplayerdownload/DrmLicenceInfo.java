@@ -16,7 +16,7 @@ import org.json.JSONObject;
     private static final String EXPIRATION_TIME = "EXPIRATION_TIME";
 
     private final String drmKey;
-    private final long expirationTime;
+    private long expirationTime;
 
     public DrmLicenceInfo(byte[] drmKey, long expirationTime) {
         this(Base64.encodeToString(drmKey, Base64.DEFAULT), expirationTime);
@@ -66,5 +66,8 @@ import org.json.JSONObject;
 
     public static DrmLicenceInfo decodeFromString(String base64String) {
         return fromBytes(decodeFromBase64String(base64String));
+    }
+    public void setExpirationTime(long expirationTime) {
+        this.expirationTime = expirationTime;
     }
 }

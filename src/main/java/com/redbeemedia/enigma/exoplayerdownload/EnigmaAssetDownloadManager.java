@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadManager;
 import com.google.android.exoplayer2.scheduler.Requirements;
+import com.redbeemedia.enigma.core.session.ISession;
 import com.redbeemedia.enigma.core.task.HandlerTaskFactory;
 import com.redbeemedia.enigma.core.task.Repeater;
 import com.redbeemedia.enigma.download.assetdownload.IAssetDownload;
@@ -150,7 +151,6 @@ import java.util.Map;
         sync();
     }
 
-
     @Override
     public void getDownloadsInProgress(IResultHandler<List<IAssetDownload>> resultHandler) {
         List<IAssetDownload> snapshot;
@@ -161,12 +161,12 @@ import java.util.Map;
     }
 
     @Override
-    public void getDownloadsInProgress(String userId, IResultHandler<List<IAssetDownload>> resultHandler) {
+    public void getDownloadsInProgress(ISession session, IResultHandler<List<IAssetDownload>> resultHandler) {
         List<IAssetDownload> snapshot;
         synchronized (ongoingDownloads) {
             List<IAssetDownload> snapshotForUserId = new ArrayList<>();
             for (ExoPlayerAssetDownload assetDownload : ongoingDownloads.values()) {
-                if (assetDownload.getMetaData().getSession().getUserId().equals(userId)) {
+                if (assetDownload.getMetaData().getSession().getSessionToken().equals(session.getSessionToken())) {
                     snapshotForUserId.add(assetDownload);
                 }
             }

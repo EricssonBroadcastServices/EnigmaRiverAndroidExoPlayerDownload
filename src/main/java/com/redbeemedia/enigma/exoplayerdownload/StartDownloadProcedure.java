@@ -132,6 +132,7 @@ import java.util.Map;
     private void onDownloadEntitlement(JSONObject jsonObject) throws JSONException, ProcedureException {
         String requestId = jsonObject.optString("requestId");
         String playToken = jsonObject.optString("playToken");
+        long playTokenExpiration = jsonObject.optLong("playTokenExpiration");
 
         JSONArray formats = jsonObject.getJSONArray("formats");
 
@@ -155,13 +156,13 @@ import java.util.Map;
             JSONObject widevineJson = format.getJSONObject("drm").getJSONObject(EnigmaMediaFormat.DrmTechnology.WIDEVINE.getKey());
             String licenseServerUrl = widevineJson.getString("licenseServerUrl");
 
-            downloadWidevineLicense(mediaFormat, mediaUri, licenseServerUrl, playToken, requestId);
+            downloadWidevineLicense(mediaFormat, mediaUri, licenseServerUrl, playToken, requestId, playTokenExpiration);
         } else {
-            startDownload(mediaFormat, mediaUri, null);
+            startDownload(mediaFormat, mediaUri, null, playTokenExpiration);
         }
     }
 
-    private void startDownload(EnigmaMediaFormat mediaFormat, Uri mediaUri, DrmLicenceInfo drmLicenceInfo) throws ProcedureException {
+    private void startDownload(EnigmaMediaFormat mediaFormat, Uri mediaUri, DrmLicenceInfo drmLicenceInfo, long playTokenExpiration) throws ProcedureException {
         AndroidThreadUtil.runOnUiThread(() -> {
             try {
                 if(context.get() == null) {
@@ -190,7 +191,7 @@ import java.util.Map;
                         AndroidThreadUtil.runOnUiThread(() -> {
                             try {
                                 String contentId = request.getContentId();
-                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo, request.getSession());
+                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo, request.getSession(), playTokenExpiration);
                                 IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
                                 metadataManager.store(contentId, metaData.getBytes());
                                 final DownloadRequest downloadRequest = new DownloadRequest.Builder(contentId, mediaUri).setStreamKeys(streamKeys).build();
@@ -217,7 +218,7 @@ import java.util.Map;
     }
 
 
-    private void downloadWidevineLicense(EnigmaMediaFormat mediaFormat, Uri mediaUri, String licenseServerUri, String playToken, String requestId) throws ProcedureException {
+    private void downloadWidevineLicense(EnigmaMediaFormat mediaFormat, Uri mediaUri, String licenseServerUri, String playToken, String requestId, long playTokenExpiration) throws ProcedureException {
         try {
             WidevineHelper.getManifest(mediaUri.toString(), new BaseResultHandler<Document>() {
                 @Override
@@ -247,7 +248,7 @@ import java.util.Map;
 
                         offlineLicenseHelper.release();
 
-                        startDownload(mediaFormat, mediaUri, drmLicenceInfo);
+                        startDownload(mediaFormat, mediaUri, drmLicenceInfo, playTokenExpiration);
                     } catch (ProcedureException e) {
                         resultHandler.onError(e.error);
                     } catch (Exception e) {
