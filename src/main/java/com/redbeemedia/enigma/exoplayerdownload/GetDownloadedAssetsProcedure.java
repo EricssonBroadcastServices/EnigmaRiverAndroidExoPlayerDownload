@@ -44,7 +44,7 @@ import java.util.List;
                 DownloadedPlayable.IInternalDownloadData downloadData = new ExoPlayerDownloadData(download.request.id, metaData);
 
                 if (session != null) {
-                    if (!metaData.getSession().getSessionToken().equals(session.getSessionToken())) {
+                    if (!metaData.getSession().getUserId().equals(session.getUserId())) {
                         continue;
                     }
                 }
