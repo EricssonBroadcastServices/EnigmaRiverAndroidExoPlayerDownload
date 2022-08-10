@@ -166,7 +166,7 @@ import java.util.Map;
         synchronized (ongoingDownloads) {
             List<IAssetDownload> snapshotForUserId = new ArrayList<>();
             for (ExoPlayerAssetDownload assetDownload : ongoingDownloads.values()) {
-                if (assetDownload.getMetaData().getSession().getSessionToken().equals(session.getSessionToken())) {
+                if (assetDownload.getMetaData().getSession().getUserId().equals(session.getUserId())) {
                     snapshotForUserId.add(assetDownload);
                 }
             }
