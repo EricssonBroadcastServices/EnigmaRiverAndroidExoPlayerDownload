@@ -270,12 +270,16 @@ import java.util.Map;
         EnigmaMediaFormat.DrmTechnology drmTechnology = enigmaMediaFormat.getDrmTechnology();
         EnigmaMediaFormat.StreamFormat streamFormat = enigmaMediaFormat.getStreamFormat();
         if(drmTechnology == EnigmaMediaFormat.DrmTechnology.NONE) {
+            // TODO: instead of MediaItem.fromUri we should rather use the builder and set the MIME type correctly as it is
+            // required in ExoPlayerDownloadData.createMediaSource and currently only inferred from the URI
             if(streamFormat == EnigmaMediaFormat.StreamFormat.DASH) {
                 return DownloadHelper.forMediaItem(context, MediaItem.fromUri(mediaUri), renderersFactory, dataSourceFactory);
             } else if(streamFormat == EnigmaMediaFormat.StreamFormat.HLS) {
                 return DownloadHelper.forMediaItem(context, MediaItem.fromUri(mediaUri), renderersFactory, dataSourceFactory);
             } else if (streamFormat == EnigmaMediaFormat.StreamFormat.SMOOTHSTREAMING) {
                 return DownloadHelper.forMediaItem(context, MediaItem.fromUri(mediaUri), renderersFactory, dataSourceFactory);
+            } else if (streamFormat == EnigmaMediaFormat.StreamFormat.MP3) {
+                return DownloadHelper.forMediaItem(context, new MediaItem.Builder().setMimeType("audio/mp3").setUri(mediaUri).build(), renderersFactory, dataSourceFactory);
             } else {
                 throw new RuntimeException("Unsupported stream format: "+streamFormat);
             }

@@ -1,12 +1,12 @@
 package com.redbeemedia.enigma.exoplayerdownload;
 
 import android.os.Parcel;
-
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadIndex;
 import com.google.android.exoplayer2.offline.StreamKey;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
@@ -84,10 +84,29 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
             cacheDataSourceFactory.setCache(downloadCache);
             cacheDataSourceFactory.setUpstreamDataSourceFactory(upstreamDataSourceFactory);
 
+            final MediaSource.Factory factory;
+            if (download.request.mimeType != null) {
+                if (download.request.mimeType.equals("audio/mp3"))
+                {
+                    factory = configurator.configure(new ProgressiveMediaSource.Factory(cacheDataSourceFactory));
+                }
+                else
+                {
+                    factory = configurator.configure(new DashMediaSource.Factory(cacheDataSourceFactory));
+                }
+            }
+            else
+            {
+                if (download.request.uri.getLastPathSegment().endsWith(".mp3"))
+                {
+                    factory = configurator.configure(new ProgressiveMediaSource.Factory(cacheDataSourceFactory));
+                }
+                else
+                {
+                    factory = configurator.configure(new DashMediaSource.Factory(cacheDataSourceFactory));
+                }
+            }
 
-            DashMediaSource.Factory factory = new DashMediaSource.Factory(cacheDataSourceFactory);
-
-            factory = configurator.configure(factory);
             List<StreamKey> keys = download.request.streamKeys;
             MediaItem.Builder mediaBuilder = new MediaItem.Builder();
             if (keys != null) {
