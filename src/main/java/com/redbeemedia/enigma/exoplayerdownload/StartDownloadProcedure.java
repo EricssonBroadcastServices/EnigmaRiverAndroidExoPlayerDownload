@@ -89,6 +89,8 @@ import java.util.Map;
         final String assetId = request.getAssetId();
         UrlPath endpoint = businessUnit.getApiBaseUrl("v2").append("/entitlement/").append(assetId).append("/download");
         try {
+            // append device parameters
+            endpoint = endpoint.appendQueryStringParameters(EnigmaRiverContext.getDeviceParameters().getParameters());
             IHttpCall call = new AuthenticatedExposureApiCall("GET", session);
             EnigmaRiverContext.getHttpHandler().doHttp(endpoint.toURL(), call, new JsonObjectResponseHandler() {
                 @Override
