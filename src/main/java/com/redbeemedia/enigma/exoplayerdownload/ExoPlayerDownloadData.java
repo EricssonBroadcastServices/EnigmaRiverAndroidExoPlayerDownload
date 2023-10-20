@@ -39,6 +39,26 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
     }
 
     @Override
+    public String getPlaySessionId() {
+        return metaData.getPlaySessionId();
+    }
+
+    @Override
+    public String getCdnProvider() {
+        return metaData.getCdnProvider();
+    }
+
+    @Override
+    public int getDuration() {
+        return metaData.getDuration();
+    }
+
+    @Override
+    public String getAnalyticsBaseUrl() {
+        return metaData.getAnalyticsBaseUrl();
+    }
+
+    @Override
     public Long getFileSize() {
         return metaData.getFileSize();
     }
@@ -46,6 +66,11 @@ public class ExoPlayerDownloadData implements DownloadedPlayable.IInternalDownlo
     @Override
     public long getPlayTokenExpiration() {
         return metaData.getPlayTokenExpiration();
+    }
+
+    @Override
+    public String getPublicationEnd() {
+        return metaData.getPublicationEnd();
     }
 
     @Override

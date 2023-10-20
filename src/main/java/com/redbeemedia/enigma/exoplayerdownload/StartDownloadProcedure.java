@@ -133,8 +133,14 @@ import java.util.Map;
 
     private void onDownloadEntitlement(JSONObject jsonObject) throws JSONException, ProcedureException {
         String requestId = jsonObject.optString("requestId");
+        String playSessionId = jsonObject.optString("playSessionId");
+        JSONObject cdn = jsonObject.optJSONObject("cdn");
+        String cdnProvider = cdn.optString("provider");
+        String baseUrl = jsonObject.optJSONObject("analytics").optString("baseUrl");
+        int duration = jsonObject.optInt("durationInMs",0);
         String playToken = jsonObject.optString("playToken");
         long playTokenExpiration = jsonObject.optLong("playTokenExpiration");
+        String publicationEnd = jsonObject.optString("publicationEnd");
 
         JSONArray formats = jsonObject.getJSONArray("formats");
 
@@ -151,20 +157,20 @@ import java.util.Map;
         Uri mediaUri = Uri.parse(format.getString("mediaLocator"));
         final EnigmaMediaFormat mediaFormat = EnigmaMediaFormat.parseMediaFormat(format);
         if(mediaFormat == null) {
-            throw new ProcedureException(new UnsupportedMediaFormatError("Could not parse format: "+format.toString()));
+            throw new ProcedureException(new UnsupportedMediaFormatError("Could not parse format: " + format.toString()));
         }
 
         if(mediaFormat.getDrmTechnology() == EnigmaMediaFormat.DrmTechnology.WIDEVINE) {
             JSONObject widevineJson = format.getJSONObject("drm").getJSONObject(EnigmaMediaFormat.DrmTechnology.WIDEVINE.getKey());
             String licenseServerUrl = widevineJson.getString("licenseServerUrl");
 
-            downloadWidevineLicense(mediaFormat, mediaUri, licenseServerUrl, playToken, requestId, playTokenExpiration);
+            downloadWidevineLicense(mediaFormat, mediaUri, licenseServerUrl, playToken, requestId, playTokenExpiration,publicationEnd, playSessionId, baseUrl, cdnProvider, duration);
         } else {
-            startDownload(mediaFormat, mediaUri, null, playTokenExpiration);
+            startDownload(mediaFormat, mediaUri, null, playTokenExpiration,publicationEnd, playSessionId, baseUrl, cdnProvider, duration);
         }
     }
 
-    private void startDownload(EnigmaMediaFormat mediaFormat, Uri mediaUri, DrmLicenceInfo drmLicenceInfo, long playTokenExpiration) throws ProcedureException {
+    private void startDownload(EnigmaMediaFormat mediaFormat, Uri mediaUri, DrmLicenceInfo drmLicenceInfo, long playTokenExpiration,String publicationEnd, String playSessionId, String baseUrl, String cdnProvider, int duration) throws ProcedureException {
         AndroidThreadUtil.runOnUiThread(() -> {
             try {
                 if(context.get() == null) {
@@ -193,9 +199,10 @@ import java.util.Map;
                         AndroidThreadUtil.runOnUiThread(() -> {
                             try {
                                 String contentId = request.getContentId();
-                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo, request.getSession(), playTokenExpiration);
+                                DownloadedAssetMetaData metaData = new DownloadedAssetMetaData(request.getAssetId(), drmLicenceInfo, request.getSession(), playTokenExpiration,publicationEnd, playSessionId, baseUrl, cdnProvider, duration);
                                 IMetadataManager metadataManager = EnigmaDownloadContext.getMetadataManager();
                                 metadataManager.store(contentId, metaData.getBytes());
+                                metadataManager.store(metaData.getAssetId(), metaData.getBytes());
                                 final DownloadRequest downloadRequest = new DownloadRequest.Builder(contentId, mediaUri).setStreamKeys(streamKeys).build();
                                 helper.release();
                                 ExoPlayerDownloadContext.sendAddDownload(downloadRequest);
@@ -220,7 +227,7 @@ import java.util.Map;
     }
 
 
-    private void downloadWidevineLicense(EnigmaMediaFormat mediaFormat, Uri mediaUri, String licenseServerUri, String playToken, String requestId, long playTokenExpiration) throws ProcedureException {
+    private void downloadWidevineLicense(EnigmaMediaFormat mediaFormat, Uri mediaUri, String licenseServerUri, String playToken, String requestId, long playTokenExpiration,String publicationEnd, String playSessionId, String baseUrl, String cdnProvider, int duration) throws ProcedureException {
         try {
             WidevineHelper.getManifest(mediaUri.toString(), new BaseResultHandler<Document>() {
                 @Override
@@ -250,7 +257,7 @@ import java.util.Map;
 
                         offlineLicenseHelper.release();
 
-                        startDownload(mediaFormat, mediaUri, drmLicenceInfo, playTokenExpiration);
+                        startDownload(mediaFormat, mediaUri, drmLicenceInfo, playTokenExpiration, publicationEnd, playSessionId, baseUrl, cdnProvider, duration);
                     } catch (ProcedureException e) {
                         resultHandler.onError(e.error);
                     } catch (Exception e) {
@@ -264,7 +271,7 @@ import java.util.Map;
                 }
             });
         } catch (MalformedURLException e) {
-            throw new ProcedureException(new InternalError("Could not parse mediaLocator: "+mediaUri.toString()));
+            throw new ProcedureException(new InternalError("Could not parse mediaLocator: " + mediaUri.toString()));
         }
     }
 
