@@ -1,3 +1,3 @@
 # ExoPlayer Download
 
-The ExoPlayer download integration library, version r3.7.1.
+The ExoPlayer download integration library, version r3.7.2-BETA-1.
