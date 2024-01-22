@@ -33,10 +33,8 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
 
   public EnigmaExoPlayerDownloadService() {
     super(
-        FOREGROUND_NOTIFICATION_ID,
-        DEFAULT_FOREGROUND_NOTIFICATION_UPDATE_INTERVAL,
-        CHANNEL_ID,
-        R.string.exo_download_notification_channel_name);
+        FOREGROUND_NOTIFICATION_ID
+    );
     nextNotificationId = FOREGROUND_NOTIFICATION_ID + 1;
   }
 
