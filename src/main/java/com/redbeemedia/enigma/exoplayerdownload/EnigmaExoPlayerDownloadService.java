@@ -2,9 +2,12 @@ package com.redbeemedia.enigma.exoplayerdownload;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.os.Build;
 
 import androidx.annotation.Nullable;
 
@@ -41,6 +44,20 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
   @Override
   public void onCreate() {
     super.onCreate();
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      try {
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "Download Service Channel",
+                NotificationManager.IMPORTANCE_DEFAULT
+        );
+        // Register the notification channel with the system
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
+      }catch (Exception ex){
+        Log.e("DownloadService", "Failed to create notification channel: "+ex);
+      }
+    }
     notificationHelper = new DownloadNotificationHelper(this, CHANNEL_ID);
   }
 
