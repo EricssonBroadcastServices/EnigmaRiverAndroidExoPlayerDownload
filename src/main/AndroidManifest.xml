@@ -2,7 +2,6 @@
     package="com.redbeemedia.enigma.exoplayerdownload" >
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application>
         <service android:name="com.redbeemedia.enigma.exoplayerdownload.EnigmaExoPlayerDownloadService"
