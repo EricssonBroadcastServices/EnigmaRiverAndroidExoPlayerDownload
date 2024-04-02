@@ -51,7 +51,6 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
                 "Download Service Channel",
                 NotificationManager.IMPORTANCE_DEFAULT
         );
-        // Register the notification channel with the system
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
       }catch (Exception ex){
