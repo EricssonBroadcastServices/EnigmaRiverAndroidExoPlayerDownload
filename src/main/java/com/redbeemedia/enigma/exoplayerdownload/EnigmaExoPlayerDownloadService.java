@@ -2,14 +2,9 @@ package com.redbeemedia.enigma.exoplayerdownload;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
-import android.os.Build;
-
-import androidx.annotation.Nullable;
 
 import com.google.android.exoplayer2.offline.Download;
 import com.google.android.exoplayer2.offline.DownloadManager;
@@ -17,7 +12,6 @@ import com.google.android.exoplayer2.offline.DownloadService;
 import com.google.android.exoplayer2.scheduler.PlatformScheduler;
 import com.google.android.exoplayer2.ui.DownloadNotificationHelper;
 import com.google.android.exoplayer2.util.Log;
-import com.google.android.exoplayer2.util.NotificationUtil;
 import com.google.android.exoplayer2.util.Util;
 
 import java.util.List;
@@ -30,33 +24,22 @@ public class EnigmaExoPlayerDownloadService extends DownloadService {
   private static final int JOB_ID = 1;
   private static final int FOREGROUND_NOTIFICATION_ID = 1;
 
-  private static int nextNotificationId = FOREGROUND_NOTIFICATION_ID + 1;
-
   private DownloadNotificationHelper notificationHelper;
 
   public EnigmaExoPlayerDownloadService() {
     super(
-        FOREGROUND_NOTIFICATION_ID
+            FOREGROUND_NOTIFICATION_ID,
+            DEFAULT_FOREGROUND_NOTIFICATION_UPDATE_INTERVAL,
+            CHANNEL_ID,
+            R.string.exo_download_notification_channel_name,
+            R.string.exo_download_description
     );
-    nextNotificationId = FOREGROUND_NOTIFICATION_ID + 1;
   }
 
   @Override
   public void onCreate() {
     super.onCreate();
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      try {
-        NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "Download Service Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-        );
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
-        notificationManager.createNotificationChannel(channel);
-      }catch (Exception ex){
-        Log.e("DownloadService", "Failed to create notification channel: "+ex);
-      }
-    }
+
     notificationHelper = new DownloadNotificationHelper(this, CHANNEL_ID);
   }
 
